@@ -54,7 +54,7 @@ def page(path,title,body,desc):
     depth=path.count('/')
     r='../'*depth
     navl=f'<a href="{r}index.html">Home</a><a href="{r}fees-and-documents/index.html">Fees and documents</a>'+''.join(f'<a href="{r}banks/{s}/index.html">{n}</a>' for _,n,s in BANKS)+f'<a href="{r}provinces/index.html">Provinces</a>'
-    h=f'''<!doctype html><html lang="en-ZA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{H.escape(title)}</title><meta name="description" content="{H.escape(desc)}"><style>{CSS}</style></head><body>
+    h=f'''<!doctype html><html lang="en-ZA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{H.escape(title)}</title><meta name="description" content="{H.escape(desc)}"><style>{CSS}</style><script defer src="/_vercel/insights/script.js"></script></head><body>
 <header><a href="{r}index.html">Smart ID at the Bank (SA)</a><nav>{navl}</nav></header><main><p class="checked">Last checked: {D}</p>{body}</main>
 <footer>Independent, unofficial guide. Not affiliated with the Department of Home Affairs (DHA) or any bank. Facts are taken only from official DHA, gov.za and bank pages, linked next to each fact. Rules change often: always confirm on the official source before you travel. DHA contact centre: 0800 60 11 90 {src('fnb')}. Last checked: {D}.</footer></body></html>'''
     assert '\u2014' not in h and '\u2013' not in h, path
