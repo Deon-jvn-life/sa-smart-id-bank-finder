@@ -1,2 +1,4 @@
 User-agent: *
 Allow: /
+
+Sitemap: https://sa-smart-id-bank-finder.vercel.app/sitemap.xml
