@@ -1,5 +1,13 @@
 import json,re,os,html as H
 D="21 October 2026"
+BASE="https://sa-smart-id-bank-finder.vercel.app"
+SITE_NAME="Smart ID at the Bank (SA)"
+# Optional search-console tokens. Leave a value empty to omit that meta tag.
+GOOGLE_SITE_VERIFICATION=""
+MSVALIDATE_01=""
+DISCLAIMER="For general information only. This independent site is not affiliated with any government, bank or agency. Information can change and may contain errors; always confirm with the official source before you act. Nothing here is legal, financial or professional advice, and we accept no liability for decisions made using it."
+DISCLAIMER_SHORT="For general information only. This independent site is not affiliated with any government, bank or agency."
+RELATED_GUIDE="https://sa-passport-id-usa-guide-w1ab.vercel.app/"
 HERE=os.path.dirname(os.path.abspath(__file__))
 OUT=os.path.abspath(os.path.join(HERE,"..","site"))
 S=dict(
@@ -74,18 +82,128 @@ main{max-width:960px;margin:0 auto;padding:16px}h1{font-size:1.6rem;line-height:
 .card{background:#fff;border:1px solid #e3e6ea;border-radius:10px;padding:14px 16px;margin:12px 0}.note{background:#fff8e1;border-color:#f3d27a}
 .src{font-size:12px;color:#5a6472}.src a{color:#5a6472}a{color:#0b5d3b}table{border-collapse:collapse;width:100%;background:#fff;font-size:14px}
 th,td{border:1px solid #e3e6ea;padding:6px 8px;text-align:left;vertical-align:top}th{background:#eef2f0}.wrap{overflow-x:auto}
-.checked{font-size:13px;color:#5a6472;margin:0 0 8px}footer{max-width:960px;margin:24px auto;padding:16px;font-size:13px;color:#5a6472}
+.checked{font-size:13px;color:#5a6472;margin:0 0 8px}.disclaimer{font-size:13.5px;line-height:1.45;background:#eef2f0;border:1px solid #d5ddd8;border-radius:8px;padding:8px 10px;margin:0 0 12px}footer{max-width:960px;margin:24px auto;padding:16px;font-size:13px;color:#5a6472}footer p{margin:0 0 8px}
 input{width:100%;padding:8px;font-size:15px;border:1px solid #cdd3da;border-radius:6px;margin:8px 0}ul.grid{columns:2;padding-left:18px}@media(max-width:600px){ul.grid{columns:1}}"""
 PATHS=[]
-def page(path,title,body,desc,checked=None):
-    PATHS.append(path)
-    depth=path.count('/')
-    r='../'*depth
+META_WARNINGS=[]
+_MONTHS={m:f"{i:02d}" for i,m in enumerate(["January","February","March","April","May","June","July","August","September","October","November","December"],1)}
+def iso_date(s):
+    d,m,y=s.split()
+    return f"{y}-{_MONTHS[m]}-{int(d):02d}"
+def check_meta(path,title,desc):
+    if not 50<=len(title)<=60:
+        META_WARNINGS.append(path)
+        print(f"WARNING title length {len(title)} (want 50 to 60) {path}: {title}")
+    if not 120<=len(desc)<=160:
+        META_WARNINGS.append(path)
+        print(f"WARNING description length {len(desc)} (want 120 to 160) {path}: {desc}")
+def canonical_for(path):
+    if path=='index.html': return BASE+'/'
+    if path.endswith('/index.html'): return BASE+'/'+path[:path.rfind('/')+1]
+    return BASE+'/'+path
+def plain_text(s):
+    s=re.sub(r'\s*<span class="src">.*?</span>','',s,flags=re.S)
+    s=re.sub(r'<[^>]+>','',s)
+    s=H.unescape(s)
+    s=re.sub(r'\s+',' ',s)
+    s=re.sub(r'\s+([.,;:])',r'\1',s)
+    return s.strip()
+def json_ld(obj):
+    raw=json.dumps(obj,ensure_ascii=False,separators=(',',':'))
+    return raw.replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
+def org_node():
+    return {"@type":"Organization","name":SITE_NAME,"url":BASE+"/","logo":{"@type":"ImageObject","url":BASE+"/apple-touch-icon.png"}}
+def crumb_trail(path):
+    items=[("Home",BASE+"/")]
+    if path=='index.html': return items
+    if path=='404.html':
+        items.append(("Page not found",canonical_for(path)))
+        return items
+    rel=path[:-len('/index.html')] if path.endswith('/index.html') else path[:-5]
+    if rel.startswith('provinces/') and rel!='provinces':
+        items.append(("Provinces",BASE+"/provinces/"))
+        prov=next(p for p in PROV if slug(p)==rel.split('/')[-1])
+        items.append((prov,BASE+"/"+rel+"/"))
+        return items
+    if rel.startswith('banks/'):
+        name=next(n for _,n,s in BANKS if s==rel.split('/')[-1])
+        items.append((name,BASE+"/"+rel+"/"))
+        return items
+    labels={"fees-and-documents":"Fees and documents","booking-and-walk-ins":"Booking and walk-ins","lost-or-stolen-smart-id":"Lost or stolen ID","first-smart-id-at-16":"First ID at 16","provinces":"Provinces","disclaimer":"Disclaimer"}
+    items.append((labels[rel],BASE+"/"+rel+"/"))
+    return items
+def clean_href(url):
+    if re.match(r'^[a-z][a-z0-9+.-]*:',url) or url.startswith('#') or url.startswith('//'): return url
+    parts=[p for p in url.split('/') if p not in ('','.','..')]
+    if not parts or parts==['index.html']: return '/'
+    if parts[-1]=='index.html':
+        parts=parts[:-1]
+        return '/' if not parts else '/'+'/'.join(parts)+'/'
+    if '.' in parts[-1]: return '/'+'/'.join(parts)
+    return '/'+'/'.join(parts)+'/'
+def clean_links(html):
+    return re.sub(r'href="([^"]*)"',lambda m:'href="%s"'%clean_href(m.group(1)),html)
+def bank_title(name):
+    titled=f"{name} Smart ID and passport branches: walk-in, fees, rules"
+    if 50<=len(titled)<=60: return titled
+    return f"{name} Smart ID branches: walk-in, fees, rules"
+def bank_desc(name):
+    return f"{name} Smart ID and passport branch service: walk-in or booking, client requirement, fees and branch list. Sourced from DHA."
+def province_title(name):
+    # Same pattern as "Smart ID at banks in Gauteng: Capitec, FNB, Absa branches".
+    # Longer province names drop "at" so the title stays within 50 to 60 characters.
+    exact=f"Smart ID at banks in {name}: Capitec, FNB, Absa branches"
+    if 50<=len(exact)<=60: return exact
+    return f"Smart ID banks in {name}: Capitec, FNB, Absa branches"
+def province_desc(name):
+    return f"Bank branches in {name} for a Smart ID, from the DHA Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go."
+def page(path,title,body,desc,checked=None,faq=None,article=True,sitemap=True,robots=None):
     when=checked or D
-    navl=f'<a href="{r}index.html">Home</a><a href="{r}fees-and-documents/index.html">Fees and documents</a><a href="{r}booking-and-walk-ins/index.html">Booking and walk-ins</a><a href="{r}lost-or-stolen-smart-id/index.html">Lost or stolen ID</a><a href="{r}first-smart-id-at-16/index.html">First ID at 16</a>'+''.join(f'<a href="{r}banks/{s}/index.html">{n}</a>' for _,n,s in BANKS)+f'<a href="{r}provinces/index.html">Provinces</a>'
-    h=f'''<!doctype html><html lang="en-ZA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{H.escape(title)}</title><meta name="description" content="{H.escape(desc)}"><style>{CSS}</style><script defer src="/_vercel/insights/script.js"></script></head><body>
-<header><a href="{r}index.html">Smart ID at the Bank (SA)</a><nav>{navl}</nav></header><main><p class="checked">Last checked: {when}</p>{body}</main>
-<footer>Independent, unofficial guide. Not affiliated with the Department of Home Affairs (DHA) or any bank. Facts are taken only from official DHA, gov.za and bank pages, linked next to each fact. Rules change often: always confirm on the official source before you travel. DHA contact centre: 0800 60 11 90 {src('fnb')}. Last checked: {when}.</footer></body></html>'''
+    check_meta(path,title,desc)
+    if sitemap: PATHS.append((path,iso_date(when)))
+    canonical=canonical_for(path)
+    navl='<a href="/">Home</a><a href="/fees-and-documents/">Fees and documents</a><a href="/booking-and-walk-ins/">Booking and walk-ins</a><a href="/lost-or-stolen-smart-id/">Lost or stolen ID</a><a href="/first-smart-id-at-16/">First ID at 16</a>'+''.join(f'<a href="/banks/{s}/">{n}</a>' for _,n,s in BANKS)+'<a href="/provinces/">Provinces</a>'
+    graph=[]
+    if path=='index.html':
+        graph.append({"@type":"WebSite","name":SITE_NAME,"url":BASE+"/","description":desc,"inLanguage":"en-ZA"})
+        graph.append(org_node())
+    if article:
+        graph.append({"@type":"Article","headline":title,"description":desc,"datePublished":iso_date(when),"dateModified":iso_date(when),"inLanguage":"en-ZA","mainEntityOfPage":canonical,"image":BASE+"/og.png","author":org_node(),"publisher":org_node()})
+    crumbs=crumb_trail(path)
+    graph.append({"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":i,"name":name,"item":url} for i,(name,url) in enumerate(crumbs,1)]})
+    if faq:
+        graph.append({"@type":"FAQPage","mainEntity":[{"@type":"Question","name":q,"acceptedAnswer":{"@type":"Answer","text":plain_text(a)}} for q,a in faq]})
+    head=['<!doctype html><html lang="en-ZA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
+        f'<title>{H.escape(title)}</title>',
+        f'<meta name="description" content="{H.escape(desc)}">',
+        f'<link rel="canonical" href="{canonical}">']
+    if robots: head.append(f'<meta name="robots" content="{H.escape(robots)}">')
+    if GOOGLE_SITE_VERIFICATION: head.append(f'<meta name="google-site-verification" content="{H.escape(GOOGLE_SITE_VERIFICATION)}">')
+    if MSVALIDATE_01: head.append(f'<meta name="msvalidate.01" content="{H.escape(MSVALIDATE_01)}">')
+    og_type="website" if path in ("index.html","404.html") else "article"
+    head+=[
+        f'<meta property="og:title" content="{H.escape(title)}">',
+        f'<meta property="og:description" content="{H.escape(desc)}">',
+        f'<meta property="og:type" content="{og_type}">',
+        f'<meta property="og:url" content="{canonical}">',
+        f'<meta property="og:site_name" content="{H.escape(SITE_NAME)}">',
+        '<meta property="og:locale" content="en_ZA">',
+        f'<meta property="og:image" content="{BASE}/og.png">',
+        '<meta property="og:image:width" content="1200">',
+        '<meta property="og:image:height" content="630">',
+        '<meta property="og:image:alt" content="Smart ID at the Bank, South Africa">',
+        '<meta name="twitter:card" content="summary_large_image">',
+        f'<meta name="twitter:title" content="{H.escape(title)}">',
+        f'<meta name="twitter:description" content="{H.escape(desc)}">',
+        f'<meta name="twitter:image" content="{BASE}/og.png">',
+        '<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
+        '<link rel="apple-touch-icon" href="/apple-touch-icon.png">',
+        f'<script type="application/ld+json">{json_ld({"@context":"https://schema.org","@graph":graph})}</script>',
+        f'<style>{CSS}</style><script defer src="/_vercel/insights/script.js"></script></head><body>']
+    h=''.join(head)+f'''
+<header><a href="/">{SITE_NAME}</a><nav>{navl}</nav></header><main><p class="disclaimer">{H.escape(DISCLAIMER_SHORT)} <a href="/disclaimer/">Disclaimer</a>.</p><p class="checked">Last checked: {when}</p>{body}</main>
+<footer><p>{H.escape(DISCLAIMER)}</p><p><a href="/disclaimer/">Disclaimer</a></p><p>Related guides: <a href="{RELATED_GUIDE}">Passport and ID guide for South Africans in the USA</a>.</p><p>Independent, unofficial guide. Not affiliated with the Department of Home Affairs (DHA) or any bank. Facts are taken only from official DHA, gov.za and bank pages, linked next to each fact. Rules change often: always confirm on the official source before you travel. DHA contact centre: 0800 60 11 90 {src('fnb')}. Last checked: {when}.</p></footer></body></html>'''
+    h=clean_links(h)
     assert '\u2014' not in h and '\u2013' not in h, path
     os.makedirs(os.path.dirname(f'{OUT}/{path}') or OUT,exist_ok=True); open(f'{OUT}/{path}','w').write(h)
 def dptable(rows,showprov=False,showbank=False):
@@ -129,7 +247,7 @@ body=f'''<h1>Smart ID and passport services at South African bank branches</h1>
 <h2>What is available at bank branches</h2><div class="card"><p>Available under the Digital Partnership: Smart ID re-issues (lost, stolen, damaged) and green ID book to Smart ID replacements{src('digital')}. What DHA and each bank say about that re-issue: <a href="lost-or-stolen-smart-id/index.html">Replacing a lost or stolen Smart ID</a>.</p>
 <p>Not yet available there: passport applications (phase 1), first-time IDs (for example turning 16), late birth registration, name changes, amendments to personal details, complex civic services{src('digital')}. DHA has said passports and first-time Smart IDs will be added later{src('absams')}. What a first ID at 16 requires at a Home Affairs office: <a href="first-smart-id-at-16/index.html">First Smart ID at 16</a>.</p></div>
 <h2>Short FAQ</h2>'''+''.join(f'<div class="card"><strong>{q}</strong><p>{a}</p></div>' for q,a in faq)
-page('index.html',"Smart ID and passport at SA bank branches: sourced guide",body,"Which South African bank branches offer Smart ID and passport services, walk-in or booking, fees, documents. Sourced from DHA and bank pages.")
+page('index.html',"Smart ID and passport at SA bank branches: sourced guide",body,"Which South African bank branches offer Smart ID and passport services, walk-in or booking, fees, documents. Sourced from DHA and bank pages.",faq=faq)
 # FEES
 fb=f'''<h1>Fees, documents and age rules</h1>
 <h2>DHA fees (tariffs)</h2><div class="wrap"><table><tr><th>Service</th><th>DHA fee</th><th>Source</th></tr>
@@ -159,7 +277,7 @@ fb=f'''<h1>Fees, documents and age rules</h1>
 <li>For children's passports, both parents and the children must be present (exceptions apply){src('travel')}.</li>
 <li>Digital Partnership bank branches: children cannot apply; first-time IDs must go to a Home Affairs office{src('digital')}. The document and parent comparison is on <a href="../first-smart-id-at-16/index.html">First Smart ID at 16</a>.</li>
 <li>Standard Bank online route: South African citizens 16 and older{src('sb')}.</li></ul></div>'''
-page('fees-and-documents/index.html',"Smart ID and passport fees, documents and age rules (DHA)",fb,"DHA fees for Smart ID and passports, documents to bring and age rules, with sources.")
+page('fees-and-documents/index.html',"Smart ID and passport fees, documents and age rules (DHA)",fb,"DHA fees for Smart ID and passports, documents to bring at a bank or a Home Affairs office, and age rules, each linked to an official source.")
 # BANK PAGES
 info={
 "capitec":(f'''<ul><li>Model: DHA Digital Partnership{src('locator')}. Walk-ins without appointment{src('digital')}.</li>
@@ -213,10 +331,10 @@ for pid,n,s in BANKS:
     lg=[l for l in leg if l['name'].upper().startswith(n.upper().split()[0])]
     if lg:
         b+=f'<h2>{n} eHomeAffairs bank branches listed by DHA{src("legacy")}</h2><p>Booking required; DHA states no walk-ins.</p><div class="wrap"><table><tr><th>Branch</th><th>City</th><th>Province</th><th>Phone (as listed)</th></tr>'+''.join(f'<tr><td>{H.escape(l["name"])}</td><td>{H.escape(l["city"])}</td><td>{l["prov"]}</td><td>{l["phone"]}</td></tr>' for l in lg)+'</table></div>'
-    page(f'banks/{s}/index.html',f"{n} Smart ID and passport branches: walk-in, fees, rules",b,f"{n} Smart ID and passport branch service: walk-in or booking, client requirement, fees, branch list. Sourced.")
+    page(f'banks/{s}/index.html',bank_title(n),b,bank_desc(n))
 # PROVINCES
 pi='<h1>Branches by province</h1><ul>'+''.join(f'<li><a href="{slug(p)}/index.html">{p}</a></li>' for p in PROV)+'</ul>'
-page('provinces/index.html',"Smart ID bank branches by province",pi,"Bank branches offering Smart ID services, per South African province.")
+page('provinces/index.html',"Smart ID at banks by province: Capitec, FNB, Absa branches",pi,"Smart ID bank branches in every South African province, from the DHA Digital Partnership locator and the older eHomeAffairs lists. Confirm before you travel.")
 PROVBANK={'Eastern Cape':'ecb','Free State':'fsb','Gauteng':'gtb','KwaZulu-Natal':'kznb','Limpopo':'limb','Mpumalanga':'mpub','North West':'nwb','Northern Cape':'ncb','Western Cape':'wcb'}
 for p in PROV:
     rows=[b for s in dp for b in dp[s] if b['province']==p]
@@ -225,7 +343,7 @@ for p in PROV:
     b+=f'<h2>eHomeAffairs bank branches in {p}{src("legacy")}</h2>'
     if lg: b+=f'<p>Apply and book online first. DHA\'s {p} bank-branch page says no walk-ins are allowed at banks{src(PROVBANK[p])}. See <a href="../../booking-and-walk-ins/index.html">Booking and walk-ins</a>.</p><div class="wrap"><table><tr><th>Branch</th><th>City</th><th>Phone (as listed)</th></tr>'+''.join(f'<tr><td>{H.escape(l["name"])}</td><td>{H.escape(l["city"])}</td><td>{l["phone"]}</td></tr>' for l in lg)+'</table></div>'
     else: b+='<p>DHA lists none for this province.</p>'
-    page(f'provinces/{slug(p)}/index.html',f"Smart ID bank branches in {p}",b,f"Bank branches in {p} offering Smart ID services, sourced from DHA.")
+    page(f'provinces/{slug(p)}/index.html',province_title(p),b,province_desc(p))
 PROVLINKS=' '.join(f'<a href="{S[k]}" rel="noopener">{label}</a>' for k,label in [('ecb','Eastern Cape'),('fsb','Free State'),('gtb','Gauteng'),('kznb','KwaZulu-Natal'),('limb','Limpopo'),('mpub','Mpumalanga'),('nwb','North West'),('ncb','Northern Cape'),('wcb','Western Cape')])
 bb=f'''<h1>Booking a Smart ID: BABS, bank branches and walk-ins</h1>
 <p>A common question is whether a Smart ID at a bank is booked on DHA's Branch Appointment Booking System (BABS), and whether a walk-in is accepted. Official pages describe three different ways to apply. This page says which way books a Home Affairs office, which way books a bank, and what each official page says about walk-ins. Fees, documents and age rules are on <a href="../fees-and-documents/index.html">Fees and documents</a>. Branch lists are on the <a href="../banks/capitec/index.html">bank</a> and <a href="../provinces/index.html">province</a> pages.</p>
@@ -353,7 +471,7 @@ bb=f'''<h1>Booking a Smart ID: BABS, bank branches and walk-ins</h1>
 <tr><td>Older DHA bank-branch lists</td><td>No walk-ins. Online application and a booked visit first{src('gtb')}.</td></tr>
 </table></div>
 <p>Branch lists and client rules: <a href="../banks/capitec/index.html">Capitec</a>, <a href="../banks/standard-bank/index.html">Standard Bank</a>, <a href="../banks/fnb/index.html">FNB</a>, <a href="../banks/absa/index.html">Absa</a>, <a href="../banks/nedbank/index.html">Nedbank</a>, and <a href="../provinces/index.html">provinces</a>. What to pay and what to carry: <a href="../fees-and-documents/index.html">Fees and documents</a>.</p>'''
-page('booking-and-walk-ins/index.html',"Booking a Smart ID: BABS, bank branches and walk-ins",bb,"How to book a South African Smart ID: BABS for Home Affairs offices, eHomeAffairs for older bank branches, and walk-in rules at Digital Partnership banks. Each fact links to an official source.")
+page('booking-and-walk-ins/index.html',"Booking a Smart ID: BABS, bank branches and walk-ins",bb,"How to book a South African Smart ID: BABS for Home Affairs offices, eHomeAffairs for older bank branches, and walk-in rules at Digital Partnership banks.")
 # LOST OR STOLEN
 ls=f'''<h1>Replacing a lost or stolen Smart ID</h1>
 <p>This page compares what official DHA, gov.za and bank pages say about replacing an identity document that has been lost, stolen or damaged, including a police report or an affidavit only where that page states it. The tariff list is on <a href="../fees-and-documents/index.html">Fees and documents</a>. Booking a Home Affairs office, and how a bank visit differs, is on <a href="../booking-and-walk-ins/index.html">Booking and walk-ins</a>. Branch lists are on the <a href="../banks/capitec/index.html">bank</a> pages and the <a href="../provinces/index.html">province</a> pages.</p>
@@ -434,7 +552,7 @@ ls=f'''<h1>Replacing a lost or stolen Smart ID</h1>
 <p>The eHomeAffairs steps, for an application generally, are: create or continue an application, complete the form, upload documents, pay online with Nedbank, choose a date and a participating branch, then visit for fingerprints and a photo. At that step, Nedbank says the requirements differ for children under 18 and refers you to DHA. Later on the same page, under applying at the DHA, Nedbank states a birth certificate, proof of address, and a parent or guardian if the applicant is younger than 18. That later list is compared on <a href="../first-smart-id-at-16/index.html">First Smart ID at 16</a>{src('ned')}.</p>
 <p>Branches: <a href="../banks/nedbank/index.html">Nedbank</a>.</p></div>
 <p>Back to the <a href="../index.html">home page</a>, <a href="../fees-and-documents/index.html">fees and documents</a>, and <a href="../booking-and-walk-ins/index.html">booking and walk-ins</a>.</p>'''
-page('lost-or-stolen-smart-id/index.html',"Replacing a lost or stolen Smart ID: DHA and bank rules",ls,"What DHA and each bank say about replacing a lost, stolen or damaged South African Smart ID, including a police report or affidavit only where an official source states it.",checked="22 October 2026")
+page('lost-or-stolen-smart-id/index.html',"Replacing a lost or stolen Smart ID: DHA and bank rules",ls,"What DHA and each bank say about replacing a lost, stolen or damaged Smart ID, including a police report or affidavit only where an official source states it.",checked="22 October 2026")
 # FIRST SMART ID AT 16
 ft=f'''<h1>First Smart ID at 16</h1>
 <p>This page is for a first identity document from age 16: who must apply, what to carry, who must come along, what it costs, and whether a bank branch can take it. DHA publishes more than one list, and the lists do not match. The cells below keep each list with the page it comes from. Tariffs in one table are on <a href="../fees-and-documents/index.html">Fees and documents</a>. Booking a Home Affairs office, which is not the same as a bank visit, is on <a href="../booking-and-walk-ins/index.html">Booking and walk-ins</a>. A card you already had, including a green ID book converted to a Smart ID: <a href="../lost-or-stolen-smart-id/index.html">Replacing a lost or stolen Smart ID</a>.</p>
@@ -533,18 +651,121 @@ ft=f'''<h1>First Smart ID at 16</h1>
 <li>Which of the two DHA document lists an office will accept if you bring only one of them{src('iddocs','sidpdf')}.</li>
 </ul></div>
 <p>Back to the <a href="../index.html">home page</a>, <a href="../fees-and-documents/index.html">fees and documents</a>, <a href="../booking-and-walk-ins/index.html">booking and walk-ins</a>, and the bank pages: <a href="../banks/capitec/index.html">Capitec</a>, <a href="../banks/standard-bank/index.html">Standard Bank</a>, <a href="../banks/fnb/index.html">FNB</a>, <a href="../banks/absa/index.html">Absa</a>, <a href="../banks/nedbank/index.html">Nedbank</a>.</p>'''
-page('first-smart-id-at-16/index.html',"First Smart ID at 16: documents, parents, fees and bank branches",ft,"First South African Smart ID at 16: DHA document lists, who must attend, the free first issue, and which banks do not take a first-time applicant.",checked="23 October 2026")
+page('first-smart-id-at-16/index.html',"First Smart ID at 16: documents, parents, fees and banks",ft,"First South African Smart ID at 16: DHA document lists, who must attend, the free first issue, and which banks do not take a first-time applicant.",checked="23 October 2026")
+disc=f'''<h1>Disclaimer</h1>
+<p>{H.escape(DISCLAIMER)}</p>
+<h2>Accuracy</h2>
+<p>Pages on this site are written from Department of Home Affairs, gov.za and bank pages, and those pages are linked next to the facts. The wording can still be wrong, incomplete or out of date. A branch list, a fee, a document rule or a walk-in rule can change after the Last checked date on a page. Nothing here is a promise that a branch will accept an application on the day you visit.</p>
+<h2>No warranty</h2>
+<p>The site is general information only. We give no warranty, express or implied, that the pages are accurate, complete, current or fit for any purpose. We do not promise that the site will always be available.</p>
+<h2>Limitation of liability</h2>
+<p>To the fullest extent allowed by law, we accept no liability for any loss, cost or damage arising from using this site, from being unable to use it, or from acting or not acting on anything written here. That includes a decision about a Smart ID, a passport, a bank account, a fee, a booking, or a visit to a branch or an office. If you need advice about your own situation, ask the Department of Home Affairs, the bank, or a qualified professional.</p>
+<h2>External links are not endorsed</h2>
+<p>Links to official and bank websites are there so you can read the source. We do not control those sites. A link is not an endorsement of the whole site, and it is not an affiliation or a partnership.</p>
+<h2>Not affiliated</h2>
+<p>This independent site is not affiliated with, endorsed by, or speaking for the Department of Home Affairs, the South African government, any bank, or any other agency. Bank names and Home Affairs are used only to describe services those organisations publish.</p>
+<h2>Check official sources</h2>
+<p>Always confirm with the official source before you act. Use the source link next to a fact, the Department of Home Affairs website, or the bank page. Where official pages do not say the same thing, this site reports both, and the live official page is the one to follow on the day you apply.</p>
+<h2>Contact and corrections</h2>
+<p>This site has no contact desk, advice line or user account. It cannot take an application, book a slot, or correct a record at Home Affairs. If a fact looks wrong, open the linked official page and follow that page. Do not send an identity number, a passport number or any other personal document to this site. There is nowhere here that can receive it.</p>'''
+page('disclaimer/index.html',"Disclaimer: Smart ID at the Bank, an independent guide",disc,"This independent site is not affiliated with any government, bank or agency. General information only, with no warranty and no liability for how you use it.",checked="24 October 2026")
+hubs=[("/","Home"),("/fees-and-documents/","Fees and documents"),("/booking-and-walk-ins/","Booking and walk-ins"),("/lost-or-stolen-smart-id/","Lost or stolen ID"),("/first-smart-id-at-16/","First ID at 16"),("/banks/capitec/","Capitec"),("/banks/standard-bank/","Standard Bank"),("/banks/fnb/","FNB"),("/banks/absa/","Absa"),("/banks/nedbank/","Nedbank"),("/provinces/","Provinces"),("/disclaimer/","Disclaimer")]
+missing='<h1>Page not found</h1><p>That address is not a page on this site. Use the navigation above, or one of these guides.</p><ul>'+''.join(f'<li><a href="{href}">{H.escape(label)}</a></li>' for href,label in hubs)+'</ul>'
+page('404.html',"Page not found: Smart ID at South African bank branches",missing,"That address is not a page on this Smart ID bank guide. Open the home page, a bank, a province, or the fees, booking, lost card and first ID guides.",sitemap=False,article=False,robots="noindex")
 def sitemap_loc(path):
-    if path=='index.html': return 'https://sa-smart-id-bank-finder.vercel.app/'
-    return 'https://sa-smart-id-bank-finder.vercel.app/'+path[:path.rfind('/')+1]
+    if path=='index.html': return BASE+'/'
+    return BASE+'/'+path[:path.rfind('/')+1]
 sm='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-for pth in PATHS:
-    sm+=f'  <url><loc>{sitemap_loc(pth)}</loc></url>\n'
+for pth,lastmod in PATHS:
+    sm+=f'  <url><loc>{sitemap_loc(pth)}</loc><lastmod>{lastmod}</lastmod></url>\n'
 sm+='</urlset>\n'
 assert '\u2014' not in sm and '\u2013' not in sm
 open(f'{OUT}/sitemap.xml','w').write(sm)
-robots='User-agent: *\nAllow: /\n\nSitemap: https://sa-smart-id-bank-finder.vercel.app/sitemap.xml\n'
+robots=f'User-agent: *\nAllow: /\n\nSitemap: {BASE}/sitemap.xml\n'
 assert '\u2014' not in robots and '\u2013' not in robots
 open(f'{OUT}/robots.txt','w').write(robots)
+def font_file(bold):
+    names=["Inter-Bold.ttf","DejaVuSans-Bold.ttf","NotoSans-Bold.ttf"] if bold else ["Inter-Medium.ttf","Inter-Regular.ttf","DejaVuSans.ttf","NotoSans-Regular.ttf"]
+    found={}
+    font_root="/usr/share/fonts"
+    if os.path.isdir(font_root):
+        for root,dirs,files in os.walk(font_root):
+            for fn in files: found.setdefault(fn,os.path.join(root,fn))
+    for name in names:
+        if name in found: return found[name]
+    return None
+def save_png(path,w,h,rgb_at):
+    import struct,zlib
+    def chunk(tag,data):
+        return struct.pack(">I",len(data))+tag+data+struct.pack(">I",zlib.crc32(tag+data)&0xFFFFFFFF)
+    raw=bytearray()
+    for y in range(h):
+        raw.append(0)
+        for x in range(w): raw.extend(rgb_at(x,y))
+    ihdr=struct.pack(">IIBBBBB",w,h,8,2,0,0,0)
+    png=b"\x89PNG\r\n\x1a\n"+chunk(b"IHDR",ihdr)+chunk(b"IDAT",zlib.compress(bytes(raw),9))+chunk(b"IEND",b"")
+    open(path,"wb").write(png)
+def write_plain_images():
+    green=(11,93,59); white=(255,255,255); mint=(217,242,230)
+    def card(w,h,box):
+        x0,y0,x1,y1=box
+        def rgb(x,y):
+            if x0<=x<x1 and y0<=y<y1: return white
+            if x<8 or y<8 or x>=w-8 or y>=h-8: return mint
+            return green
+        return rgb
+    save_png(f"{OUT}/og.png",1200,630,card(1200,630,(96,150,460,480)))
+    save_png(f"{OUT}/apple-touch-icon.png",180,180,card(180,180,(36,48,144,132)))
+def write_images():
+    svg='''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+<rect width="32" height="32" rx="6" fill="#0b5d3b"/>
+<rect x="6" y="8" width="20" height="16" rx="2" fill="none" stroke="#ffffff" stroke-width="1.6"/>
+<circle cx="12" cy="16" r="2.3" fill="#d9f2e6"/>
+<rect x="16" y="13" width="7" height="1.6" rx="0.4" fill="#ffffff"/>
+<rect x="16" y="17" width="5.5" height="1.6" rx="0.4" fill="#d9f2e6"/>
+</svg>
+'''
+    assert '\u2014' not in svg and '\u2013' not in svg
+    open(f"{OUT}/favicon.svg","w").write(svg)
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+    except ImportError:
+        print("WARNING Pillow is not installed; writing a plain brand image")
+        write_plain_images(); return
+    bold,medium,regular=font_file(True),font_file(False),font_file(False)
+    if not bold or not medium:
+        print("WARNING no font found; writing a plain brand image")
+        write_plain_images(); return
+    bg=(11,93,59); white=(255,255,255); mint=(217,242,230); soft=(232,240,236)
+    im=Image.new("RGB",(1200,630),bg)
+    d=ImageDraw.Draw(im)
+    d.rounded_rectangle((48,48,1152,582),radius=28,outline=mint,width=3)
+    d.rounded_rectangle((96,150,460,480),radius=22,fill=white)
+    d.ellipse((132,206,228,302),fill=bg)
+    d.rounded_rectangle((252,222,420,246),radius=6,fill=soft)
+    d.rounded_rectangle((252,266,390,286),radius=6,fill=soft)
+    d.rounded_rectangle((252,306,360,326),radius=6,fill=soft)
+    d.rounded_rectangle((132,390,424,428),radius=8,fill=bg)
+    d.text((500,188),"Smart ID",font=ImageFont.truetype(bold,108),fill=white)
+    d.text((500,320),"at the Bank",font=ImageFont.truetype(medium,58),fill=mint)
+    d.text((500,400),"South Africa",font=ImageFont.truetype(regular,36),fill=mint)
+    im.save(f"{OUT}/og.png","PNG")
+    ic=Image.new("RGB",(180,180),bg)
+    di=ImageDraw.Draw(ic)
+    di.rounded_rectangle((28,46,152,134),radius=12,fill=white)
+    di.ellipse((44,66,84,106),fill=bg)
+    di.rounded_rectangle((94,72,136,84),radius=3,fill=soft)
+    di.rounded_rectangle((94,94,128,104),radius=3,fill=soft)
+    di.rounded_rectangle((44,112,136,124),radius=3,fill=bg)
+    ic.save(f"{OUT}/apple-touch-icon.png","PNG")
+write_images()
+def png_wh(path):
+    with open(path,"rb") as f:
+        f.read(16)
+        return int.from_bytes(f.read(4),"big"), int.from_bytes(f.read(4),"big")
+assert png_wh(f"{OUT}/og.png")==(1200,630)
+assert png_wh(f"{OUT}/apple-touch-icon.png")==(180,180)
 print(total,len(leg),len(PATHS))
+if META_WARNINGS:
+    print(f"meta warnings: {len(META_WARNINGS)}")
 

@@ -61,4 +61,4 @@ Import this Git repository. Use these settings:
 
 `vercel.json` sets the same values: `framework` is `null` (Other), `buildCommand` and `installCommand` are empty strings so those steps are skipped, and `outputDirectory` is `site`. With framework Other and no build command, Vercel serves `site/` directly.
 
-Leave Clean URLs off. The pages link to explicit `index.html` paths.
+Pages link to clean paths such as `/fees-and-documents/`. Each page is still a folder with `index.html`, which is what that path serves.
