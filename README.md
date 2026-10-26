@@ -4,7 +4,7 @@ Independent, unofficial static guide to Smart ID and passport services at South 
 
 This is not affiliated with DHA or any bank. Rules change often. Confirm on the official source before you travel.
 
-The pages were last checked on 21 October 2026. That date is baked into the HTML.
+The pages were last checked on 26 October 2026. That date is baked into the HTML.
 
 ## Pages
 
@@ -15,13 +15,13 @@ The pages were last checked on 21 October 2026. That date is baked into the HTML
 - Bank pages: Capitec, Standard Bank, FNB, Absa, Nedbank
 - Provinces index, plus one page for each of the nine provinces
 
-On 21 October 2026 the DHA locator listed 686 Digital Partnership branches: Capitec 373, Standard Bank 156, FNB 135, Absa 22. Nedbank was not in that locator.
+On 26 October 2026 the DHA locator listed 700 Digital Partnership branches: Capitec 373, Standard Bank 157, FNB 140, Absa 30. Nedbank was not in that locator. A gov.za statement the same day said the service was live at 669 bank branches. The statement does not explain the difference.
 
 ## Sources
 
 Branch data lives in `tools/`:
 
-- `p1.json` Capitec, `p2.json` Standard Bank, `p3.json` FNB, `p4.json` Absa. Each file is a dump of the DHA partner locator (`https://myhomeaffairsonline.dha.gov.za/api/civics/search-partner?partner_id=` with partner ids 1 to 4). Shape: `{ "branches": [ { "branchName", "suburb", "city", "province", "postal_code" } ] }`.
+- `p1.json` Capitec, `p2.json` Standard Bank, `p3.json` FNB, `p4.json` Absa. Each file is a dump of the DHA partner locator (`https://myhomeaffairsonline.dha.gov.za/api/civics/search-partner?partner_id=` with partner ids 1 to 4). Shape: `{ "branches": [ { "branchName", "suburb", "city", "province", "postal_code", "enabledProducts" } ] }`. On 26 October 2026 every branch had `enabledProducts` set to `RE_ISSUE` only.
 - `legacy.json`: older eHomeAffairs bank branches taken from the DHA province branch pages. Shape: a list of `{ "page", "name", "city", "phone" }`.
 - Nedbank is not in the locator. Its six branches are written in `tools/build.py` from Nedbank's own page.
 
