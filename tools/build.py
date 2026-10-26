@@ -3,7 +3,7 @@ D="26 October 2026"
 BASE="https://sa-smart-id-bank-finder.vercel.app"
 SITE_NAME="Smart ID at the Bank (SA)"
 # Optional search-console tokens. Leave a value empty to omit that meta tag.
-GOOGLE_SITE_VERIFICATION=""
+GOOGLE_SITE_VERIFICATION="XA7XgB_UwrIRvQyNVsnWpSyTyaU6e3-v4g4RBw8RAVI"
 MSVALIDATE_01=""
 DISCLAIMER="For general information only. This independent site is not affiliated with any government, bank or agency. Information can change and may contain errors; always confirm with the official source before you act. Nothing here is legal, financial or professional advice, and we accept no liability for decisions made using it."
 DISCLAIMER_SHORT="For general information only. This independent site is not affiliated with any government, bank or agency."
@@ -186,7 +186,7 @@ def page(path,title,body,desc,checked=None,faq=None,article=True,sitemap=True,ro
         f'<meta name="description" content="{H.escape(desc)}">',
         f'<link rel="canonical" href="{canonical}">']
     if robots: head.append(f'<meta name="robots" content="{H.escape(robots)}">')
-    if GOOGLE_SITE_VERIFICATION: head.append(f'<meta name="google-site-verification" content="{H.escape(GOOGLE_SITE_VERIFICATION)}">')
+    if GOOGLE_SITE_VERIFICATION: head.append(f'<meta name="google-site-verification" content="{H.escape(GOOGLE_SITE_VERIFICATION)}" />')
     if MSVALIDATE_01: head.append(f'<meta name="msvalidate.01" content="{H.escape(MSVALIDATE_01)}">')
     og_type="website" if path in ("index.html","404.html") else "article"
     head+=[
