@@ -87,14 +87,11 @@ for o in json.load(open(os.path.join(HERE,'legacy.json'))):
     pv=[p for p in PROV if slug(p) in o['page'].replace('kwazulu-natal','kwazulu-natal')]
     pv=[p for p in PROV if slug(p)+'-banks' in o['page']][0]
     leg.append(dict(name=name.title().replace('Fnb','FNB').replace('Absa Bank','Absa').replace("'S ","'s "),city=city,phone=o['phone'],prov=pv,page=o['page']))
-CSS="""*{box-sizing:border-box}body{margin:0;font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1d2433;background:#f7f8fa}
-header{background:#0b5d3b;color:#fff;padding:14px 16px}header a{color:#fff;text-decoration:none;font-weight:600}nav{margin-top:6px;font-size:14px}nav a{color:#d9f2e6;margin-right:12px;font-weight:400;display:inline-block}
-main{max-width:960px;margin:0 auto;padding:16px}h1{font-size:1.6rem;line-height:1.25}h2{font-size:1.25rem;margin-top:1.8em}h3{font-size:1.05rem;margin-top:1.4em}
-.card{background:#fff;border:1px solid #e3e6ea;border-radius:10px;padding:14px 16px;margin:12px 0}.note{background:#fff8e1;border-color:#f3d27a}
-.src{font-size:12px;color:#5a6472}.src a{color:#5a6472}a{color:#0b5d3b}table{border-collapse:collapse;width:100%;background:#fff;font-size:14px}
-th,td{border:1px solid #e3e6ea;padding:6px 8px;text-align:left;vertical-align:top}th{background:#eef2f0}.wrap{overflow-x:auto}
-.checked{font-size:13px;color:#5a6472;margin:0 0 8px}.disclaimer{font-size:13.5px;line-height:1.45;background:#eef2f0;border:1px solid #d5ddd8;border-radius:8px;padding:8px 10px;margin:0 0 12px}footer{max-width:960px;margin:24px auto;padding:16px;font-size:13px;color:#5a6472}footer p{margin:0 0 8px}
-input{width:100%;padding:8px;font-size:15px;border:1px solid #cdd3da;border-radius:6px;margin:8px 0}ul.grid{columns:2;padding-left:18px}@media(max-width:600px){ul.grid{columns:1}}"""
+CSS=open(os.path.join(HERE,"shell.css"),encoding="utf-8").read()
+SHELL_JS=open(os.path.join(HERE,"shell.js"),encoding="utf-8").read()
+MARK='<svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect x="1" y="5" width="30" height="22" rx="3" fill="none" stroke="#fff" stroke-width="2"/><circle cx="11" cy="16" r="3.2" fill="#FFB81C"/><rect x="17" y="12" width="9" height="2" rx="1" fill="#fff"/><rect x="17" y="17" width="7" height="2" rx="1" fill="#E7F2EC"/></svg>'
+TOC_BOOT='<script>if(window.matchMedia("(min-width:960px)").matches){var d=document.currentScript.previousElementSibling;if(d&&d.tagName==="DETAILS")d.open=true;}</script>'
+
 PATHS=[]
 META_WARNINGS=[]
 _MONTHS={m:f"{i:02d}" for i,m in enumerate(["January","February","March","April","May","June","July","August","September","October","November","December"],1)}
@@ -125,35 +122,36 @@ def json_ld(obj):
 def org_node():
     return {"@type":"Organization","name":SITE_NAME,"url":BASE+"/","logo":{"@type":"ImageObject","url":BASE+"/apple-touch-icon.png"}}
 def crumb_trail(path):
-    items=[("Home",BASE+"/")]
-    if path=='index.html': return items
+    home=("Home",BASE+"/")
+    if path=='index.html': return [home]
     if path=='404.html':
-        items.append(("Page not found",canonical_for(path)))
-        return items
-    rel=path[:-len('/index.html')] if path.endswith('/index.html') else path[:-5]
-    if rel.startswith('provinces/') and rel!='provinces':
+        return [home,("Page not found",canonical_for(path))]
+    title=TITLE_OF.get(path,"Page")
+    topic=TOPIC_OF.get(path)
+    if path=='provinces/index.html':
+        return [home,("Provinces",canonical_for(path))]
+    items=[home]
+    if topic=="Provinces":
         items.append(("Provinces",BASE+"/provinces/"))
-        prov=next(p for p in PROV if slug(p)==rel.split('/')[-1])
-        items.append((prov,BASE+"/"+rel+"/"))
-        return items
-    if rel.startswith('banks/'):
-        name=next(n for _,n,s in BANKS if s==rel.split('/')[-1])
-        items.append((name,BASE+"/"+rel+"/"))
-        return items
-    labels={"fees-and-documents":"Fees and documents","booking-and-walk-ins":"Booking and walk-ins","lost-or-stolen-smart-id":"Lost or stolen ID","first-smart-id-at-16":"First ID at 16","collecting-smart-id-or-passport":"Collect your ID","green-id-book-to-smart-id":"Green ID book","applying-for-a-passport":"Passport","provinces":"Provinces","disclaimer":"Disclaimer"}
-    items.append((labels[rel],BASE+"/"+rel+"/"))
+    elif topic:
+        items.append((topic,BASE+"/#"+slug(topic)))
+    items.append((title,canonical_for(path)))
     return items
-def clean_href(url):
+def clean_href(url, page='index.html'):
     if re.match(r'^[a-z][a-z0-9+.-]*:',url) or url.startswith('#') or url.startswith('//'): return url
+    frag=''
+    if '#' in url:
+        url,frag=url.split('#',1)
+        frag='#'+frag
     parts=[p for p in url.split('/') if p not in ('','.','..')]
-    if not parts or parts==['index.html']: return '/'
+    if not parts or parts==['index.html']: return '/'+frag
     if parts[-1]=='index.html':
         parts=parts[:-1]
-        return '/' if not parts else '/'+'/'.join(parts)+'/'
-    if '.' in parts[-1]: return '/'+'/'.join(parts)
-    return '/'+'/'.join(parts)+'/'
-def clean_links(html):
-    return re.sub(r'href="([^"]*)"',lambda m:'href="%s"'%clean_href(m.group(1)),html)
+        return ('/' if not parts else '/'+'/'.join(parts)+'/')+frag
+    if '.' in parts[-1]: return '/'+'/'.join(parts)+frag
+    return '/'+'/'.join(parts)+'/'+frag
+def clean_links(html, page='index.html'):
+    return re.sub(r'href="([^"]*)"',lambda m:'href="%s"'%clean_href(m.group(1), page),html)
 def bank_title(name):
     titled=f"{name} Smart ID and passport branches: walk-in, fees, rules"
     if 50<=len(titled)<=60: return titled
@@ -168,31 +166,149 @@ def province_title(name):
     return f"Smart ID banks in {name}: Capitec, FNB, Absa branches"
 def province_desc(name):
     return f"Bank branches in {name} for a Smart ID, from the DHA Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go."
+def heading_plain(inner):
+    s=re.sub(r'\s*<span class="src">.*?</span>','',inner,flags=re.S)
+    s=re.sub(r'<[^>]+>','',s)
+    s=H.unescape(s)
+    return re.sub(r'\s+',' ',s).strip()
+def unique_slug(text, seen):
+    base=slug(heading_plain(text)) or 'section'
+    i=base
+    n=2
+    while i in seen:
+        i=f'{base}-{n}'
+        n+=1
+    seen.add(i)
+    return i
+def search_rows():
+    rows=[{"u":"/","t":"Home","s":SUMMARIES["index.html"],"g":"Home","k":ALIASES.get("index.html","")}]
+    for g, items in TOPICS:
+        for p, t in items:
+            rows.append({"u":clean_href(p),"t":t,"s":SUMMARIES.get(p,""),"g":g,"k":ALIASES.get(p,"")})
+    return json.dumps(rows,ensure_ascii=False).replace("<","\\u003c").replace(">","\\u003e").replace("&","\\u0026")
+def jump(path, label=None):
+    title=label or TITLE_OF[path]
+    blurb=SUMMARIES.get(path,"")
+    blurb_html=f'<span class="ls">{H.escape(blurb)}</span>' if blurb else ''
+    return f'<a class="jump" href="{path}"><span class="lt">{H.escape(title)}</span>{blurb_html}</a>'
+def start_here_html():
+    items=''.join(f'<li>{jump(p)}</li>' for p in GUIDE_SEQ)
+    return ('<section aria-labelledby="start-here"><h2 id="start-here">Start here</h2>'
+            '<p>Open these pages in this order: what it costs, how to book, the document you need, then collecting it.</p>'
+            f'<ol class="tasks">{items}</ol></section>')
+def top_tasks_html():
+    items=''.join(f'<li>{jump(p, label)}</li>' for p, label in TASKS)
+    return ('<section aria-labelledby="top-tasks"><h2 id="top-tasks">Top tasks</h2>'
+            '<p>Common jobs on this guide. Each card opens one page.</p>'
+            f'<ul class="tasks">{items}</ul></section>')
+def all_topics_html():
+    blocks=[]
+    for g, items in TOPICS:
+        gid=slug(g)
+        cards=''.join(f'<li>{jump(p)}</li>' for p, _t in items)
+        blocks.append(f'<section class="topic"><h3 id="{gid}">{H.escape(g)}</h3><ul class="link-grid">{cards}</ul></section>')
+    return ('<section aria-labelledby="all-topics"><h2 id="all-topics">All topics</h2>'
+            '<p>Every page on this guide, grouped by subject.</p>'+''.join(blocks)+'</section>')
+def series_nav(path):
+    seq=next((s for s in SEQS if path in s), None)
+    if not seq: return ''
+    i=seq.index(path)
+    parts=[]
+    if i>0:
+        p=seq[i-1]
+        parts.append(f'<a class="prev" href="{p}"><span class="pn-k">Previous</span><span class="pn-t">{H.escape(TITLE_OF[p])}</span></a>')
+    if i+1<len(seq):
+        p=seq[i+1]
+        parts.append(f'<a class="next" href="{p}"><span class="pn-k">Next</span><span class="pn-t">{H.escape(TITLE_OF[p])}</span></a>')
+    if not parts: return ''
+    return '<nav class="pn" aria-label="Pages in this series">'+''.join(parts)+'</nav>'
+def read_next_html(path):
+    items=[]
+    for dest in READ_NEXT.get(path) or []:
+        label=TITLE_OF.get(dest)
+        if not label: continue
+        blurb=SUMMARIES.get(dest,"")
+        blurb_html=f'<span class="ls">{H.escape(blurb)}</span>' if blurb else ''
+        items.append(f'<li><a class="jump" href="{dest}"><span class="lt">{H.escape(label)}</span>{blurb_html}</a></li>')
+    if not items:
+        raise SystemExit('Missing Read next on '+path)
+    return '<aside class="readnext" aria-labelledby="read-next"><h2 id="read-next">Read next</h2><ul>'+''.join(items)+'</ul></aside>'
 def page(path,title,body,desc,checked=None,faq=None,article=True,sitemap=True,robots=None):
     when=checked or D
     check_meta(path,title,desc)
     if sitemap: PATHS.append((path,iso_date(when)))
     canonical=canonical_for(path)
-    navl='<a href="/">Home</a><a href="/fees-and-documents/">Fees and documents</a><a href="/booking-and-walk-ins/">Booking and walk-ins</a><a href="/lost-or-stolen-smart-id/">Lost or stolen ID</a><a href="/first-smart-id-at-16/">First ID at 16</a><a href="/collecting-smart-id-or-passport/">Collect your ID</a><a href="/green-id-book-to-smart-id/">Green ID book</a><a href="/applying-for-a-passport/">Passport</a>'+''.join(f'<a href="/banks/{s}/">{n}</a>' for _,n,s in BANKS)+'<a href="/provinces/">Provinces</a>'
+    body=body.replace('<th>','<th scope="col">')
+    body=body.replace('<div class="wrap">','<div class="wrap" tabindex="0">')
+    if '<h1>' in body:
+        body=body.replace('<h1>','<h1 id="page-title">',1)
+    summary=SUMMARIES.get(path,'')
+    long_page=path not in ('index.html','find/index.html','404.html','provinces/index.html') and len(plain_text(body))>=700
+    if summary and long_page and '</h1>' in body:
+        body=body.replace('</h1>','</h1><div class="inshort"><p><strong>In short.</strong> '+H.escape(summary)+'</p></div>',1)
+    seen=set(re.findall(r'\bid="([^"]+)"', body))
+    seen.add('read-next')
+    def addid(m):
+        i=unique_slug(m.group(1), seen)
+        return f'<h2 id="{i}">{m.group(1)}</h2>'
+    body=re.sub(r'<h2>(.*?)</h2>', addid, body, flags=re.S)
+    h2_pairs=[]
+    for m in re.finditer(r'<h2\b([^>]*)>(.*?)</h2>', body, flags=re.S):
+        idm=re.search(r'\bid="([^"]+)"', m.group(1))
+        if not idm: continue
+        hid=idm.group(1)
+        if hid=='read-next': continue
+        h2_pairs.append((hid, heading_plain(m.group(2))))
+    toc=''
+    if len(h2_pairs)>=3:
+        opened=' open' if len(h2_pairs)<=8 else ''
+        lis=''.join(f'<li><a href="#{hid}">{H.escape(label)}</a></li>' for hid, label in h2_pairs)
+        toc=f'<nav class="toc" aria-label="On this page" tabindex="0"><details class="toc-details"{opened}><summary>On this page</summary><ul>{lis}</ul></details>{TOC_BOOT}</nav>'
+    split_at=re.search(r'<h2\b', body)
+    if not split_at:
+        lead, rest = body, ''
+    else:
+        lead, rest = body[:split_at.start()], body[split_at.start():]
+    nav_bits=[]
+    for g, items in TOPICS:
+        links=[]
+        here=False
+        for p, t in items:
+            cur=' aria-current="page"' if p==path else ''
+            cls=' class="is-current"' if p==path else ''
+            if p==path: here=True
+            links.append(f'<a href="{p}"{cls}{cur}>{H.escape(t)}</a>')
+        mark=' aria-current="true"' if here else ''
+        nav_bits.append(f'<details class="grp{" has-current" if here else ""}"><summary{mark}>{H.escape(g)}</summary><div class="glinks">'+''.join(links)+'</div></details>')
+    nav=''.join(nav_bits)
+    crumbs=crumb_trail(path)
+    lis=[]
+    for i,(name,url) in enumerate(crumbs):
+        if i==len(crumbs)-1:
+            lis.append(f'<li><span aria-current="page">{H.escape(name)}</span></li>')
+        else:
+            href=url[len(BASE):] if url.startswith(BASE) else url
+            if not href: href='/'
+            lis.append(f'<li><a href="{href}">{H.escape(name)}</a></li>')
+    crumbs_html='<nav class="crumbs" aria-label="Breadcrumb"><ol>'+''.join(lis)+'</ol></nav>'
     graph=[]
     if path=='index.html':
         graph.append({"@type":"WebSite","name":SITE_NAME,"url":BASE+"/","description":desc,"inLanguage":"en-ZA"})
         graph.append(org_node())
     if article:
         graph.append({"@type":"Article","headline":title,"description":desc,"datePublished":iso_date(when),"dateModified":iso_date(when),"inLanguage":"en-ZA","mainEntityOfPage":canonical,"image":BASE+"/og.png","author":org_node(),"publisher":org_node()})
-    crumbs=crumb_trail(path)
     graph.append({"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":i,"name":name,"item":url} for i,(name,url) in enumerate(crumbs,1)]})
     if faq:
         graph.append({"@type":"FAQPage","mainEntity":[{"@type":"Question","name":q,"acceptedAnswer":{"@type":"Answer","text":plain_text(a)}} for q,a in faq]})
-    head=['<!doctype html><html lang="en-ZA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
+    head_bits=['<!doctype html><html lang="en-ZA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#06382A">',
         f'<title>{H.escape(title)}</title>',
         f'<meta name="description" content="{H.escape(desc)}">',
         f'<link rel="canonical" href="{canonical}">']
-    if robots: head.append(f'<meta name="robots" content="{H.escape(robots)}">')
-    if GOOGLE_SITE_VERIFICATION: head.append(f'<meta name="google-site-verification" content="{H.escape(GOOGLE_SITE_VERIFICATION)}" />')
-    if MSVALIDATE_01: head.append(f'<meta name="msvalidate.01" content="{H.escape(MSVALIDATE_01)}">')
+    if robots: head_bits.append(f'<meta name="robots" content="{H.escape(robots)}">')
+    if GOOGLE_SITE_VERIFICATION: head_bits.append(f'<meta name="google-site-verification" content="{H.escape(GOOGLE_SITE_VERIFICATION)}" />')
+    if MSVALIDATE_01: head_bits.append(f'<meta name="msvalidate.01" content="{H.escape(MSVALIDATE_01)}">')
     og_type="website" if path in ("index.html","404.html") else "article"
-    head+=[
+    head_bits+=[
         f'<meta property="og:title" content="{H.escape(title)}">',
         f'<meta property="og:description" content="{H.escape(desc)}">',
         f'<meta property="og:type" content="{og_type}">',
@@ -211,23 +327,166 @@ def page(path,title,body,desc,checked=None,faq=None,article=True,sitemap=True,ro
         '<link rel="apple-touch-icon" href="/apple-touch-icon.png">',
         f'<script type="application/ld+json">{json_ld({"@context":"https://schema.org","@graph":graph})}</script>',
         f'<style>{CSS}</style><script defer src="/_vercel/insights/script.js"></script></head><body>']
-    h=''.join(head)+f'''
-<header><a href="/">{SITE_NAME}</a><nav>{navl}</nav></header><main><p class="disclaimer">{H.escape(DISCLAIMER_SHORT)} <a href="/disclaimer/">Disclaimer</a>.</p><p class="checked">Last checked: {when}</p>{body}</main>
-<footer><p>{H.escape(DISCLAIMER)}</p><p><a href="/disclaimer/">Disclaimer</a></p><p>Related guides: <a href="{RELATED_GUIDE}">Passport and ID guide for South Africans in the USA</a>.</p><p>Independent, unofficial guide. Not affiliated with the Department of Home Affairs (DHA) or any bank. Facts are taken only from official DHA, gov.za and bank pages, linked next to each fact. Rules change often: always confirm on the official source before you travel. DHA contact centre: 0800 60 11 90 {src('fnb')}. Last checked: {when}.</p></footer></body></html>'''
-    h=clean_links(h)
+    notice=f'<div class="notice" role="note"><div class="shell"><p class="disclaimer">{H.escape(DISCLAIMER_SHORT)} <a href="/disclaimer/">Disclaimer</a>.</p></div></div>'
+    meta=f'<p class="meta"><span class="checked">Last checked: {when}</span></p>'
+    pn=series_nav(path)
+    readnext=read_next_html(path)
+    layout_cls='layout has-toc' if toc else 'layout'
+    foot=(f'<footer><div class="shell"><nav class="footnav" aria-label="About this guide"><a href="/find/">All pages</a><a href="/disclaimer/">Disclaimer</a></nav>'
+          f'<p>{H.escape(DISCLAIMER)}</p><p><a href="/disclaimer/">Disclaimer</a></p>'
+          f'<p>Related guides: <a href="{RELATED_GUIDE}">Passport and ID guide for South Africans in the USA</a>.</p>'
+          f'<p>Independent, unofficial guide. Not affiliated with the Department of Home Affairs (DHA) or any bank. Facts are taken only from official DHA, gov.za and bank pages, linked next to each fact. Rules change often: always confirm on the official source before you travel. DHA contact centre: 0800 60 11 90 {src("fnb")}. Last checked: {when}.</p></div></footer>')
+    search_tag=f'<script type="application/json" id="search-data">{search_rows()}</script><script>{SHELL_JS}</script>'
+    h=''.join(head_bits)+f'''
+<a class="skip" href="#content">Skip to content</a>
+<div id="head-slot"><header id="site-header"><div class="shell">
+<a class="brand" href="/">{MARK}<span class="name"><span class="name-main">Smart ID at the Bank</span><span class="name-compact">Smart ID guide</span><span class="name-sub">Independent guide. Not a government website.</span></span></a>
+<button type="button" class="search-toggle" aria-expanded="false" aria-controls="site-search"><svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="search-toggle-text">Search</span></button>
+<a class="headlink" href="/find/">All pages</a>
+<div class="search-wrap" id="site-search"><form class="sitesearch" role="search" action="/find/" method="get"><label for="q">Search this guide</label><input id="q" name="q" type="search" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="submit">Search</button></form><div id="search-results" class="search-results" hidden tabindex="0" role="region" aria-live="polite" aria-label="Matching pages"></div></div>
+<details class="menu"><summary>Topics</summary></details>
+<nav id="site-nav" class="top" aria-label="Topics" tabindex="0">{nav}</nav>
+<span class="nav-fade nav-fade-left" aria-hidden="true"></span><span class="nav-fade nav-fade-right" aria-hidden="true"></span><span class="nav-hint" aria-hidden="true"></span>
+</div></header></div>
+<main id="content" tabindex="-1">{notice}<div class="shell">{crumbs_html}{meta}<article class="content" aria-labelledby="page-title"><div class="head-block">{lead}</div><div class="{layout_cls}">{toc}<div class="rest">{rest}{pn}{readnext}</div></div></article></div></main>
+{foot}
+{search_tag}</body></html>'''
+    h=clean_links(h, path)
     assert '\u2014' not in h and '\u2013' not in h, path
+    assert 'Independent guide. Not a government website.' in h, path
+    assert 'For general information only.' in h, path
+    assert DISCLAIMER in h, path
+    assert f'Last checked: {when}' in h, path
+    assert '/_vercel/insights/script.js' in h, path
+    assert 'id="read-next"' in h, path
+    if GOOGLE_SITE_VERIFICATION:
+        assert f'name="google-site-verification" content="{GOOGLE_SITE_VERIFICATION}"' in h, path
+    assert f'rel="canonical" href="{canonical}"' in h, path
     os.makedirs(os.path.dirname(f'{OUT}/{path}') or OUT,exist_ok=True); open(f'{OUT}/{path}','w').write(h)
 def dptable(rows,showprov=False,showbank=False):
     t='<div class="wrap"><table><tr>'+('<th>Bank</th>' if showbank else '')+'<th>Branch</th><th>Address line</th><th>City</th>'+('<th>Province</th>' if showprov else '')+'<th>Postal code</th></tr>'
     for b in sorted(rows,key=lambda x:(x.get('_bank',''),x['city'],x['branchName'])):
         t+='<tr>'+(f"<td>{b['_bank']}</td>" if showbank else '')+f"<td>{H.escape(b['branchName'])}</td><td>{H.escape(b['suburb'])}</td><td>{H.escape(b['city'])}</td>"+(f"<td>{b['province']}</td>" if showprov else '')+f"<td>{b['postal_code']}</td></tr>"
     return t+'</table></div>'
-FILTER='''<input id="q" placeholder="Filter by town, mall or branch name" oninput="var v=this.value.toLowerCase();document.querySelectorAll('table tr').forEach(function(r,i){if(r.querySelector('td'))r.style.display=r.textContent.toLowerCase().indexOf(v)>-1?'':'none'})">'''
+FILTER='''<div class="branch-filter"><label for="branch-filter">Filter by town, mall or branch name</label><input id="branch-filter" type="search" placeholder="Town, mall or branch name" autocomplete="off" oninput="var v=this.value.toLowerCase();document.querySelectorAll('table tr').forEach(function(r,i){if(r.querySelector('td'))r.style.display=r.textContent.toLowerCase().indexOf(v)>-1?'':'none'})"></div>'''
 for pid,n,s in BANKS:
     if s in dp:
         for b in dp[s]: b['_bank']=n; b['province']=normprov(b['province'])
 counts={s:len(v) for s,v in dp.items()}
 total=sum(counts.values())
+# Topic menu. Plain-language groups. Page facts stay in the page bodies.
+TOPICS=[
+ ("Before you go",[
+    ("fees-and-documents/index.html","Fees and documents"),
+    ("booking-and-walk-ins/index.html","Booking and walk-ins"),
+ ]),
+ ("Which document",[
+    ("green-id-book-to-smart-id/index.html","Green ID book to Smart ID"),
+    ("lost-or-stolen-smart-id/index.html","Lost or stolen Smart ID"),
+    ("first-smart-id-at-16/index.html","First Smart ID at 16"),
+    ("applying-for-a-passport/index.html","Applying for a passport"),
+    ("collecting-smart-id-or-passport/index.html","Collecting a Smart ID or passport"),
+ ]),
+ ("Banks",[
+    ("banks/capitec/index.html","Capitec"),
+    ("banks/standard-bank/index.html","Standard Bank"),
+    ("banks/fnb/index.html","FNB (First National Bank)"),
+    ("banks/absa/index.html","Absa"),
+    ("banks/nedbank/index.html","Nedbank"),
+ ]),
+ ("Provinces",[("provinces/index.html","All provinces")]+[(f"provinces/{slug(p)}/index.html", p) for p in PROV]),
+ ("Using this guide",[
+    ("find/index.html","All pages"),
+    ("disclaimer/index.html","Disclaimer"),
+ ]),
+]
+TITLE_OF={"index.html":"Home"}
+TOPIC_OF={}
+for _g,_items in TOPICS:
+    for _p,_t in _items:
+        TITLE_OF[_p]=_t
+        TOPIC_OF[_p]=_g
+GUIDE_SEQ=[p for p,_t in TOPICS[0][1]]+[p for p,_t in TOPICS[1][1]]
+BANK_SEQ=[p for p,_t in TOPICS[2][1]]
+PROV_SEQ=[f"provinces/{slug(p)}/index.html" for p in PROV]
+SEQS=[GUIDE_SEQ,BANK_SEQ,PROV_SEQ]
+TASKS=[
+ ("provinces/index.html","Find a branch by province"),
+ ("fees-and-documents/index.html","Fees and documents"),
+ ("booking-and-walk-ins/index.html","Booking and walk-ins"),
+ ("green-id-book-to-smart-id/index.html","Green ID book to Smart ID"),
+ ("lost-or-stolen-smart-id/index.html","Lost or stolen Smart ID"),
+ ("collecting-smart-id-or-passport/index.html","Collecting a Smart ID or passport"),
+]
+SUMMARIES={
+ "index.html":"Start here, top tasks, and every topic on this guide.",
+ "fees-and-documents/index.html":"Department of Home Affairs fees for a Smart ID and a passport, documents to bring at a bank or a Home Affairs office, and age rules, each linked to an official source.",
+ "booking-and-walk-ins/index.html":"How to book a South African Smart ID: the Branch Appointment Booking System for Home Affairs offices, eHomeAffairs for older bank branches, and walk-in rules at Digital Partnership banks.",
+ "lost-or-stolen-smart-id/index.html":"What the Department of Home Affairs and each bank say about replacing a lost, stolen or damaged Smart ID, including a police report or an affidavit only where an official source states it.",
+ "first-smart-id-at-16/index.html":"First South African Smart ID at 16: Department of Home Affairs document lists, who must attend, the free first issue, and which banks do not take a first-time applicant.",
+ "collecting-smart-id-or-passport/index.html":"When a South African Smart ID or passport is ready: how the Department of Home Affairs and each bank notify you, where you collect, what to bring, who may collect, and any deadline a source states.",
+ "green-id-book-to-smart-id/index.html":"Switching a South African green ID book to a Smart ID: whether it is still valid, the dates announced for 2027 and 2028, the fee, and which banks take it.",
+ "applying-for-a-passport/index.html":"Where to apply for a South African passport, which banks name it, the Department of Home Affairs document list, consent for a child, and the fee each official page states.",
+ "disclaimer/index.html":"This independent site is not affiliated with any government, bank or agency. General information only, with no warranty and no liability for how you use it.",
+ "find/index.html":"Every page on this guide, listed by topic.",
+ "provinces/index.html":"Smart ID bank branches in every South African province, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm before you travel.",
+}
+for _pid,_n,_s in BANKS:
+    _shown="First National Bank" if _n=="FNB" else _n
+    SUMMARIES[f"banks/{_s}/index.html"]=f"{_shown} Smart ID and passport branch service: walk-in or booking, client requirement, fees and branch list. Sourced from the Department of Home Affairs."
+for _p in PROV:
+    SUMMARIES[f"provinces/{slug(_p)}/index.html"]=f"Bank branches in {_p} for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go."
+ALIASES={
+ "index.html":"home smart id passport bank guide south africa",
+ "fees-and-documents/index.html":"fees cost tariff documents age DHA R140 passport",
+ "booking-and-walk-ins/index.html":"booking appointment walk-in walk in BABS eHomeAffairs",
+ "green-id-book-to-smart-id/index.html":"green barcoded ID book convert switch",
+ "lost-or-stolen-smart-id/index.html":"lost stolen damaged replace affidavit police",
+ "first-smart-id-at-16/index.html":"first ID 16 sixteen youth child minor",
+ "applying-for-a-passport/index.html":"passport child consent tourist maxi",
+ "collecting-smart-id-or-passport/index.html":"collect collection ready delivery",
+ "banks/capitec/index.html":"Capitec walk-in",
+ "banks/standard-bank/index.html":"Standard Bank",
+ "banks/fnb/index.html":"FNB First National Bank",
+ "banks/absa/index.html":"Absa",
+ "banks/nedbank/index.html":"Nedbank",
+ "provinces/index.html":"province provinces branches",
+ "find/index.html":"search index all pages find",
+ "disclaimer/index.html":"disclaimer liability warranty independent",
+}
+for _p in PROV:
+    ALIASES[f"provinces/{slug(_p)}/index.html"]=_p+" province branches"
+READ_NEXT={
+ "index.html":["fees-and-documents/index.html","booking-and-walk-ins/index.html","provinces/index.html"],
+ "fees-and-documents/index.html":["booking-and-walk-ins/index.html","green-id-book-to-smart-id/index.html","collecting-smart-id-or-passport/index.html"],
+ "booking-and-walk-ins/index.html":["fees-and-documents/index.html","banks/capitec/index.html","provinces/index.html"],
+ "green-id-book-to-smart-id/index.html":["fees-and-documents/index.html","lost-or-stolen-smart-id/index.html","booking-and-walk-ins/index.html"],
+ "lost-or-stolen-smart-id/index.html":["green-id-book-to-smart-id/index.html","fees-and-documents/index.html","collecting-smart-id-or-passport/index.html"],
+ "first-smart-id-at-16/index.html":["fees-and-documents/index.html","applying-for-a-passport/index.html","booking-and-walk-ins/index.html"],
+ "applying-for-a-passport/index.html":["fees-and-documents/index.html","collecting-smart-id-or-passport/index.html","first-smart-id-at-16/index.html"],
+ "collecting-smart-id-or-passport/index.html":["booking-and-walk-ins/index.html","applying-for-a-passport/index.html","fees-and-documents/index.html"],
+ "banks/capitec/index.html":["banks/standard-bank/index.html","booking-and-walk-ins/index.html","provinces/index.html"],
+ "banks/standard-bank/index.html":["banks/fnb/index.html","fees-and-documents/index.html","booking-and-walk-ins/index.html"],
+ "banks/fnb/index.html":["banks/absa/index.html","fees-and-documents/index.html","booking-and-walk-ins/index.html"],
+ "banks/absa/index.html":["banks/nedbank/index.html","fees-and-documents/index.html","booking-and-walk-ins/index.html"],
+ "banks/nedbank/index.html":["banks/capitec/index.html","booking-and-walk-ins/index.html","provinces/index.html"],
+ "provinces/index.html":["provinces/gauteng/index.html","provinces/western-cape/index.html","fees-and-documents/index.html"],
+ "find/index.html":["index.html","fees-and-documents/index.html","provinces/index.html"],
+ "disclaimer/index.html":["index.html","fees-and-documents/index.html","find/index.html"],
+ "404.html":["index.html","find/index.html","fees-and-documents/index.html"],
+}
+for _i,_p in enumerate(PROV):
+    _path=f"provinces/{slug(_p)}/index.html"
+    _nxt=PROV[(_i+1)%len(PROV)]
+    READ_NEXT[_path]=["provinces/index.html", f"provinces/{slug(_nxt)}/index.html", "booking-and-walk-ins/index.html"]
+_topic_paths={p for _g,_items in TOPICS for p,_t in _items}
+assert _topic_paths<=set(SUMMARIES)
+assert set(READ_NEXT)>=_topic_paths|{"index.html","404.html"}
+for _src,_dests in READ_NEXT.items():
+    assert len(_dests)==3 and _src not in _dests
+    for _dest in _dests:
+        assert _dest in TITLE_OF and _dest in SUMMARIES
+
 # HOME
 faq=[("Can I get a passport at a bank branch?",f"Under the DHA Digital Partnership page, passports are listed as not yet available in phase 1{src('digital')}. The partner-branch page lists an adult standard or maxi passport from age 18{src('locator')}. A gov.za statement of 26 October 2026 says passport services will be rolled out shortly{src('m1m')}. Some banks still run the older eHomeAffairs model, where you apply and pay online, book, then visit a branch with DHA staff. Standard Bank and FNB describe passports through that route{src('sb','fnb')}. Documents, consent for a child, and where those pages disagree: <a href=\"applying-for-a-passport/index.html\">Applying for a passport</a>."),
 ("Do I need an appointment?",f"Depends on the route. DHA says Capitec and Standard Bank allow walk-ins without an appointment at Digital Partnership branches{src('digital')}. FNB says no appointment is needed to replace a Smart ID{src('fnb')}. Absa offers booking online, in its app, or walking in{src('absa')}. DHA's Gauteng bank-branch page says no walk-ins are allowed at banks{src('gtb')}. Steps, and how BABS differs from a bank visit: <a href=\"booking-and-walk-ins/index.html\">Booking and walk-ins</a>."),
@@ -249,6 +508,8 @@ for n,s,w,c,f in rowsb:
 banktbl+='</table></div>'
 body=f'''<h1>Smart ID and passport services at South African bank branches</h1>
 <p>A plain, sourced guide to which bank branches can take your Smart ID (and in some cases passport) application, what to bring, and what it costs.</p>
+{start_here_html()}
+{top_tasks_html()}
 <div class="card"><strong>Two different systems exist.</strong><ol>
 <li><strong>DHA Digital Partnership</strong> (since 9 March 2026{src('golive')}): bank staff process the application through a secure link to DHA. Currently for green ID book to Smart ID conversion and Smart ID re-issues only{src('digital')}. DHA's live locator lists the branches{src('locator','locms')}.</li>
 <li><strong>Older eHomeAffairs bank branches</strong>: apply and pay online at eHomeAffairs, book a slot, then visit a branch hosting DHA for fingerprints and photo. DHA's Gauteng bank-branch page says no walk-ins are allowed at banks{src('gtb')}.</li></ol>
@@ -259,7 +520,7 @@ body=f'''<h1>Smart ID and passport services at South African bank branches</h1>
 <h2>Branches by province</h2><ul class="grid">'''+''.join(f'<li><a href="provinces/{slug(p)}/index.html">{p}</a> ({sum(1 for s in dp for b in dp[s] if b["province"]==p)} Digital Partnership, {sum(1 for l in leg if l["prov"]==p)} eHomeAffairs)</li>' for p in PROV)+f'''</ul>
 <h2>What is available at bank branches</h2><div class="card"><p>Available under the Digital Partnership: Smart ID re-issues (lost, stolen, damaged) and green ID book to Smart ID replacements{src('digital')}. What DHA and each bank say about that re-issue: <a href="lost-or-stolen-smart-id/index.html">Replacing a lost or stolen Smart ID</a>. Whether the green ID book is still valid, and what each bank says about that switch: <a href="green-id-book-to-smart-id/index.html">Green ID book to Smart ID</a>.</p>
 <p>Not yet available there, on the Digital Partnership page: passport applications (phase 1), first-time IDs (for example turning 16), late birth registration, name changes, amendments to personal details, complex civic services{src('digital')}. A 22 July 2026 statement said adult and minor passports and first-time Smart IDs would be added before the end of the year{src('absams')}. A 26 October 2026 statement says the Department will shortly roll out passport, first-time Smart ID, and home delivery services through these bank branches, and that within a matter of months those services, including delivery to a doorstep, will be available at over one thousand bank branches{src('m1m')}. Where a passport application can be made, and which bank page names one: <a href="applying-for-a-passport/index.html">Applying for a passport</a>. What a first ID at 16 requires at a Home Affairs office: <a href="first-smart-id-at-16/index.html">First Smart ID at 16</a>.</p></div>
-<h2>Short FAQ</h2>'''+''.join(f'<div class="card"><strong>{q}</strong><p>{a}</p></div>' for q,a in faq)
+<h2>Short FAQ</h2>'''+''.join(f'<div class="card"><strong>{q}</strong><p>{a}</p></div>' for q,a in faq)+all_topics_html()
 page('index.html',"Smart ID and passport at SA bank branches: sourced guide",body,"Which South African bank branches offer Smart ID and passport services, walk-in or booking, fees, documents. Sourced from DHA and bank pages.",faq=faq)
 # FEES
 fb=f'''<h1>Fees, documents and age rules</h1>
@@ -347,7 +608,7 @@ for pid,n,s in BANKS:
         b+=f'<h2>{n} eHomeAffairs bank branches listed by DHA{src("legacy")}</h2><p>Booking required; DHA states no walk-ins.</p><div class="wrap"><table><tr><th>Branch</th><th>City</th><th>Province</th><th>Phone (as listed)</th></tr>'+''.join(f'<tr><td>{H.escape(l["name"])}</td><td>{H.escape(l["city"])}</td><td>{l["prov"]}</td><td>{l["phone"]}</td></tr>' for l in lg)+'</table></div>'
     page(f'banks/{s}/index.html',bank_title(n),b,bank_desc(n))
 # PROVINCES
-pi='<h1>Branches by province</h1><ul>'+''.join(f'<li><a href="{slug(p)}/index.html">{p}</a></li>' for p in PROV)+'</ul>'
+pi='<h1>Branches by province</h1><ul>'+''.join(f'<li><a href="provinces/{slug(p)}/index.html">{p}</a></li>' for p in PROV)+'</ul>'
 page('provinces/index.html',"Smart ID at banks by province: Capitec, FNB, Absa branches",pi,"Smart ID bank branches in every South African province, from the DHA Digital Partnership locator and the older eHomeAffairs lists. Confirm before you travel.")
 PROVBANK={'Eastern Cape':'ecb','Free State':'fsb','Gauteng':'gtb','KwaZulu-Natal':'kznb','Limpopo':'limb','Mpumalanga':'mpub','North West':'nwb','Northern Cape':'ncb','Western Cape':'wcb'}
 for p in PROV:
@@ -981,8 +1242,14 @@ disc=f'''<h1>Disclaimer</h1>
 <h2>Contact and corrections</h2>
 <p>This site has no contact desk, advice line or user account. It cannot take an application, book a slot, or correct a record at Home Affairs. If a fact looks wrong, open the linked official page and follow that page. Do not send an identity number, a passport number or any other personal document to this site. There is nowhere here that can receive it.</p>'''
 page('disclaimer/index.html',"Disclaimer: Smart ID at the Bank, an independent guide",disc,"This independent site is not affiliated with any government, bank or agency. General information only, with no warranty and no liability for how you use it.",checked="24 October 2026")
-hubs=[("/","Home"),("/fees-and-documents/","Fees and documents"),("/booking-and-walk-ins/","Booking and walk-ins"),("/lost-or-stolen-smart-id/","Lost or stolen ID"),("/first-smart-id-at-16/","First ID at 16"),("/collecting-smart-id-or-passport/","Collect your ID"),("/green-id-book-to-smart-id/","Green ID book"),("/applying-for-a-passport/","Passport"),("/banks/capitec/","Capitec"),("/banks/standard-bank/","Standard Bank"),("/banks/fnb/","FNB"),("/banks/absa/","Absa"),("/banks/nedbank/","Nedbank"),("/provinces/","Provinces"),("/disclaimer/","Disclaimer")]
+hubs=[("/","Home"),("/fees-and-documents/","Fees and documents"),("/booking-and-walk-ins/","Booking and walk-ins"),("/lost-or-stolen-smart-id/","Lost or stolen ID"),("/first-smart-id-at-16/","First ID at 16"),("/collecting-smart-id-or-passport/","Collect your ID"),("/green-id-book-to-smart-id/","Green ID book"),("/applying-for-a-passport/","Passport"),("/banks/capitec/","Capitec"),("/banks/standard-bank/","Standard Bank"),("/banks/fnb/","FNB"),("/banks/absa/","Absa"),("/banks/nedbank/","Nedbank"),("/provinces/","Provinces"),("/find/","All pages"),("/disclaimer/","Disclaimer")]
 missing='<h1>Page not found</h1><p>That address is not a page on this site. Use the navigation above, or one of these guides.</p><ul>'+''.join(f'<li><a href="{href}">{H.escape(label)}</a></li>' for href,label in hubs)+'</ul>'
+find_body='<h1>All pages</h1><p>Type in the search box at the top of this page. The list below stays complete if search is not available.</p><p id="index-status" class="index-status" aria-live="polite">Showing every page.</p><div id="page-index">'
+for g, items in TOPICS:
+    find_body+=f'<section><h2>{H.escape(g)}</h2><ul class="index-list">'+''.join(
+        f'<li data-keywords="{H.escape(ALIASES.get(p,""))}">{jump(p)}</li>' for p, _t in items)+'</ul></section>'
+find_body+='</div>'
+page('find/index.html',"Search this Smart ID and passport bank branch guide",find_body,"Search or browse every page in this independent guide to Smart ID and passport services at South African bank branches, including fees and provinces.")
 page('404.html',"Page not found: Smart ID at South African bank branches",missing,"That address is not a page on this Smart ID bank guide. Open the home page, a bank, a province, or the fees, booking, lost card and first ID guides.",sitemap=False,article=False,robots="noindex")
 def sitemap_loc(path):
     if path=='index.html': return BASE+'/'
@@ -1030,9 +1297,9 @@ def write_plain_images():
     save_png(f"{OUT}/apple-touch-icon.png",180,180,card(180,180,(36,48,144,132)))
 def write_images():
     svg='''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-<rect width="32" height="32" rx="6" fill="#0b5d3b"/>
+<rect width="32" height="32" rx="6" fill="#06382A"/>
 <rect x="6" y="8" width="20" height="16" rx="2" fill="none" stroke="#ffffff" stroke-width="1.6"/>
-<circle cx="12" cy="16" r="2.3" fill="#d9f2e6"/>
+<circle cx="12" cy="16" r="2.3" fill="#FFB81C"/>
 <rect x="16" y="13" width="7" height="1.6" rx="0.4" fill="#ffffff"/>
 <rect x="16" y="17" width="5.5" height="1.6" rx="0.4" fill="#d9f2e6"/>
 </svg>
@@ -1048,7 +1315,7 @@ def write_images():
     if not bold or not medium:
         print("WARNING no font found; writing a plain brand image")
         write_plain_images(); return
-    bg=(11,93,59); white=(255,255,255); mint=(217,242,230); soft=(232,240,236)
+    bg=(6,56,42); white=(255,255,255); mint=(231,242,236); soft=(232,240,236)
     im=Image.new("RGB",(1200,630),bg)
     d=ImageDraw.Draw(im)
     d.rounded_rectangle((48,48,1152,582),radius=28,outline=mint,width=3)
@@ -1077,6 +1344,92 @@ def png_wh(path):
         return int.from_bytes(f.read(4),"big"), int.from_bytes(f.read(4),"big")
 assert png_wh(f"{OUT}/og.png")==(1200,630)
 assert png_wh(f"{OUT}/apple-touch-icon.png")==(180,180)
+
+def _lin(c):
+    c=c/255
+    return c/12.92 if c<=0.04045 else ((c+0.055)/1.055)**2.4
+def _lum(rgb):
+    r,g,b=rgb
+    return 0.2126*_lin(r)+0.7152*_lin(g)+0.0722*_lin(b)
+def _contrast(a,b):
+    L1,L2=_lum(a),_lum(b)
+    hi,lo=max(L1,L2),min(L1,L2)
+    return (hi+0.05)/(lo+0.05)
+def _hex(h):
+    h=h.lstrip('#')
+    return tuple(int(h[i:i+2],16) for i in (0,2,4))
+def _mix(a,b,t):
+    return tuple(round(a[i]+(b[i]-a[i])*t) for i in range(3))
+def check_contrast():
+    stops=[_hex(x) for x in ('#06382A','#0E4D38','#0C2F4A')]
+    samples=[]
+    for i in range(len(stops)-1):
+        samples.append(stops[i])
+        for step in range(1,8):
+            samples.append(_mix(stops[i], stops[i+1], step/8))
+    samples.append(stops[-1])
+    white=_hex('#ffffff'); sub=_hex('#E7F2EC'); gold=_hex('#FFB81C'); btn=_hex('#FFE08A'); ink=_hex('#1A1814')
+    worst=99
+    for rgb in samples:
+        for fg,name,need in ((white,'white',4.5),(sub,'subtitle',4.5),(gold,'gold',3)):
+            ratio=_contrast(fg, rgb)
+            worst=min(worst, ratio)
+            if ratio<need:
+                raise SystemExit(f'Contrast {ratio:.2f} fails for {name} on {rgb}')
+    if _contrast(ink, btn)<4.5:
+        raise SystemExit('Search button text contrast failed')
+    if _contrast(ink, _hex('#f3d56e'))<4.5:
+        raise SystemExit('Search button hover contrast failed')
+    surfaces=[('#0a3d66','#ffffff'),('#0a3d66','#f4f1ea'),('#0a3d66','#fff8ec'),('#0a3d66','#eef4f1'),('#0a3d66','#e7efe9'),('#0a3d66','#fff6db'),('#3d2a6b','#ffffff'),('#3d2a6b','#f4f1ea'),('#3e3a34','#ffffff'),('#3e3a34','#f4f1ea'),('#3e3a34','#fff8ec'),('#3e3a34','#fff6db'),('#143024','#e5f2ea'),('#1a1814','#f4f1ea'),('#1a1814','#ffffff'),('#1a1814','#e7efe9'),('#1a1814','#eef4f1'),('#1a1814','#fff6db')]
+    for fg,bg in surfaces:
+        ratio=_contrast(_hex(fg), _hex(bg))
+        worst=min(worst, ratio)
+        if ratio<4.5:
+            raise SystemExit(f'Contrast {ratio:.2f} fails for {fg} on {bg}')
+    print(f'contrast ok, lowest checked ratio {worst:.2f}')
+def check_internal():
+    missing=[]
+    pages=[]
+    for dirpath,_,files in os.walk(OUT):
+        for fn in files:
+            if fn.endswith('.html'):
+                pages.append(os.path.relpath(os.path.join(dirpath, fn), OUT))
+    for path in pages:
+        html=open(os.path.join(OUT, path), encoding='utf-8').read()
+        ids=set(re.findall(r'\bid="([^"]*)"', html))
+        for href_v in re.findall(r'\bhref="([^"]*)"', html):
+            if href_v.startswith(('http://','https://','mailto:','tel:')): continue
+            url,_,frag=href_v.partition('#')
+            if url=='':
+                if frag and frag not in ids: missing.append(f'{path} -> {href_v}')
+                continue
+            if url.startswith('/'):
+                rel=url.lstrip('/')
+                target='index.html' if rel=='' else (rel+'index.html' if rel.endswith('/') else rel)
+            else:
+                target=os.path.normpath(os.path.join(os.path.dirname(path), url)).replace('\\','/')
+            if not os.path.isfile(os.path.join(OUT, target)):
+                missing.append(f'{path} -> {href_v} (missing {target})'); continue
+            if frag:
+                tids=set(re.findall(r'\bid="([^"]*)"', open(os.path.join(OUT, target), encoding='utf-8').read()))
+                if frag not in tids: missing.append(f'{path} -> {href_v} (missing #{frag})')
+    if missing:
+        raise SystemExit('Broken internal links:\n'+'\n'.join(missing[:50]))
+    required=('Independent guide. Not a government website.','For general information only.',DISCLAIMER,'/_vercel/insights/script.js','id="read-next"',GOOGLE_SITE_VERIFICATION)
+    for path in pages:
+        html=open(os.path.join(OUT, path), encoding='utf-8').read()
+        for needle in required:
+            if needle not in html:
+                raise SystemExit(f'Missing {needle!r} on {path}')
+        if 'rel="canonical"' not in html:
+            raise SystemExit('Missing canonical on '+path)
+    sm=open(os.path.join(OUT,'sitemap.xml'),encoding='utf-8').read()
+    if BASE+'/find/' not in sm:
+        raise SystemExit('Sitemap is missing the find page')
+    print(len(pages),'html files, internal links ok')
+check_contrast()
+check_internal()
+
 print(total,len(leg),len(PATHS))
 if META_WARNINGS:
     print(f"meta warnings: {len(META_WARNINGS)}")
