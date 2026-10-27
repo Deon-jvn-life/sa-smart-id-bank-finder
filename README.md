@@ -8,7 +8,7 @@ The pages were last checked on 26 October 2026. That date is baked into the HTML
 
 ## Pages
 
-17 HTML pages, plus `robots.txt`:
+Guides, bank pages and province pages, plus `robots.txt`. The generator writes every HTML page. Current guides include fees and documents, booking and walk-ins, a lost or stolen Smart ID, a first Smart ID at 16, collecting a Smart ID or passport, the green ID book, and applying for a passport.
 
 - Home (`site/index.html`)
 - Fees and documents
