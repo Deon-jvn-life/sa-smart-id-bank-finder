@@ -218,7 +218,29 @@ footer p{margin:0 0 var(--s16)}
 #site-header a:focus-visible,#site-header button:focus-visible,#site-header input:focus-visible,#site-header summary:focus-visible{outline-color:var(--gold);outline-offset:2px}
 #site-header .menu summary:focus-visible,#site-header .search-results a:focus-visible,#site-header .search-empty a:focus-visible{outline-color:var(--ink)}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{scroll-behavior:auto!important}}
+.vh{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.loc-map{position:relative;z-index:1;isolation:isolate;min-height:320px;margin:var(--s16) 0;border:1px solid var(--line);border-radius:12px;background:#e7efe9}
+.map-lead{margin:var(--s12) 0}
+.map-status{margin:0;padding:var(--s16);max-width:66ch}
+.map-canvas{height:320px;background:#e7efe9}
+.map-canvas[hidden]{display:none}
+.map-use{display:inline-flex;align-items:center;justify-content:center;min-height:48px;margin:0 var(--s16) var(--s16);padding:var(--s12) var(--s16);font-size:1rem;font-weight:700;color:var(--ink);background:#fff;border:2px solid var(--ink);border-radius:8px;cursor:pointer}
+.loc-map .leaflet-container{height:100%;width:100%;z-index:1;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:16px;background:#e7efe9}
+.loc-map .leaflet-container{touch-action:pan-y}
+.loc-map.is-active .leaflet-container{touch-action:none}
+.loc-map .leaflet-control-zoom a{width:48px;height:48px;line-height:48px;font-size:1.25rem;color:var(--ink);background:#fff}
+.loc-map .leaflet-control-attribution{font-size:14px;line-height:1.4;color:var(--ink);background:rgba(255,255,255,.94);max-width:min(100%,28rem)}
+.loc-map .leaflet-control-attribution a{color:var(--link)}
+.map-pop .leaflet-popup-content{margin:16px 48px 16px 16px;font-size:16px;line-height:1.45;color:var(--ink)}
+.map-pop .leaflet-popup-content p{margin:0 0 12px}
+.map-pop .leaflet-popup-content p:last-child{margin:0}
+.map-pop .leaflet-popup-content-wrapper,.map-pop .leaflet-popup-tip{background:#fff;color:var(--ink)}
+.map-pop .leaflet-popup-close-button{width:48px;height:48px;font-size:1.5rem;color:var(--ink);padding:0}
+@media(min-width:720px){
+  .loc-map,.map-canvas{min-height:420px}
+  .map-canvas{height:420px}
+}
 @media(forced-colors:active){
-  .card,.inshort,.notice,.jump,.toc,.pn a,.menu summary,.search-toggle,.sitesearch button{border:1px solid CanvasText}
-  .sitesearch button{background:ButtonFace;color:ButtonText}
+  .card,.inshort,.notice,.jump,.toc,.pn a,.menu summary,.search-toggle,.sitesearch button,.loc-map,.map-use{border:1px solid CanvasText}
+  .sitesearch button,.map-use{background:ButtonFace;color:ButtonText}
 }

@@ -1,4 +1,4 @@
-import json,re,os,html as H
+import json,re,os,html as H,urllib.parse
 D="26 October 2026"
 BASE="https://sa-smart-id-bank-finder.vercel.app"
 SITE_NAME="Smart ID at the Bank (SA)"
@@ -346,6 +346,7 @@ def page(path,title,body,desc,checked=None,faq=None,article=True,sitemap=True,ro
           f'<p>Related guides: <a href="{RELATED_GUIDE}">Passport and ID guide for South Africans in the USA</a>.</p>'
           f'<p>Independent, unofficial guide. Not affiliated with the Department of Home Affairs (DHA) or any bank. Facts are taken only from official DHA, gov.za and bank pages, linked next to each fact. Rules change often: always confirm on the official source before you travel. DHA contact centre: 0800 60 11 90 {src("fnb")}. Last checked: {when}.</p></div></footer>')
     search_tag=f'<script type="application/json" id="search-data">{search_rows()}</script><script>{SHELL_JS}</script>'
+    map_script='<script defer src="/map.js"></script>' if 'id="branch-map"' in body else ''
     h=''.join(head_bits)+f'''
 <a class="skip" href="#content">Skip to content</a>
 <div id="head-slot"><header id="site-header"><div class="shell">
@@ -359,7 +360,7 @@ def page(path,title,body,desc,checked=None,faq=None,article=True,sitemap=True,ro
 </div></header></div>
 <main id="content" tabindex="-1">{notice}<div class="shell">{crumbs_html}{meta}<article class="content" aria-labelledby="page-title"><div class="head-block">{lead}</div><div class="{layout_cls}">{toc}<div class="rest">{rest}{pn}{readnext}</div></div></article></div></main>
 {foot}
-{search_tag}</body></html>'''
+{search_tag}{map_script}</body></html>'''
     h=clean_links(h, path)
     assert '\u2014' not in h and '\u2013' not in h, path
     assert 'Independent guide. Not a government website.' in h, path
@@ -372,11 +373,75 @@ def page(path,title,body,desc,checked=None,faq=None,article=True,sitemap=True,ro
         assert f'name="google-site-verification" content="{GOOGLE_SITE_VERIFICATION}"' in h, path
     assert f'rel="canonical" href="{canonical}"' in h, path
     os.makedirs(os.path.dirname(f'{OUT}/{path}') or OUT,exist_ok=True); open(f'{OUT}/{path}','w').write(h)
+GEO=json.load(open(os.path.join(HERE,"coords.json"),encoding="utf-8"))
+PINS=GEO.get("pins") or {}
+BANK_KEY={"Capitec":"capitec","Standard Bank":"standard-bank","FNB":"fnb","Absa":"absa","Nedbank":"nedbank"}
+NED_BRANCHES=[
+ ("Nedbank Arcadia Pretoria","Pretoria","Shop 25, Nedbank Plaza, Beatrix Street","Gauteng"),
+ ("Nedbank Sandown","Sandown","Shop L05, Lower Ground, Block, 135 Rivonia Road","Gauteng"),
+ ("Nedbank St Georges Mall","Cape Town","Shop 3 The Box, St Georges Mall c/o Riebeeck Street","Western Cape"),
+ ("Nedbank Nelspruit","Nelspruit","Shop 1, Nedbank Centre, 30 Brown Street","Mpumalanga"),
+ ("Nedbank Durban North","Durban","57 Adelaide Tambo Drive","KwaZulu-Natal"),
+ ("Nedbank Lakeview Office Park","Roodepoort","16 Constantia Blvd, Constantia Kloof","Gauteng"),
+]
+def pin_for(bank,name,line,city,postal):
+    key="|".join([bank,name.strip(),(line or "").strip(),city.strip(),str(postal).strip()])
+    p=PINS.get(key)
+    if not p: return None
+    try:
+        lat,lon=float(p["lat"]),float(p["lon"])
+    except (KeyError,TypeError,ValueError):
+        return None
+    if not (-35.5<=lat<=-21.5 and 16<=lon<=33.5): return None
+    return lat,lon
+def dir_url(address):
+    return "https://www.google.com/maps/dir/?api=1&destination="+urllib.parse.quote(address,safe="")
+def dir_link(address,name):
+    return f'<a href="{H.escape(dir_url(address),quote=True)}" target="_blank" rel="noopener">Get directions<span class="vh"> to {H.escape(name)} (opens in a new tab)</span></a>'
+def dp_address(b):
+    suburb=(b.get("suburb") or "").strip().strip(",")
+    city=(b.get("city") or "").strip()
+    parts=[(b.get("branchName") or "").strip()]
+    if suburb and suburb.lower()!=city.lower(): parts.append(suburb)
+    for extra in (city,(b.get("province") or "").strip(),str(b.get("postal_code") or "").strip(),"South Africa"):
+        if extra: parts.append(extra)
+    return ", ".join(parts)
+def map_html(points,label):
+    if not points: return ""
+    payload={"label":label,"points":points}
+    return ('<p class="map-lead">The tables on this page list every branch. This map is an extra view and only shows a pin where the official address could be placed. Map data is from <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a>. The page still scrolls as usual. Use the zoom buttons, or choose the map if you want the scroll wheel to zoom.</p>'
+        f'<div id="branch-map" class="loc-map" role="region" aria-label="{H.escape(label)}">'
+        '<p class="map-status">A map of the placed branches loads here if JavaScript is available. The table is the full list.</p>'
+        '<div class="map-canvas" hidden></div></div>'
+        f'<script type="application/json" id="branch-map-data">{json_ld(payload)}</script>')
+def point_from(name,address,lat,lon):
+    return {"name":name,"address":address,"lat":lat,"lon":lon,"directions":dir_url(address)}
 def dptable(rows,showprov=False,showbank=False):
-    t='<div class="wrap"><table><tr>'+('<th>Bank</th>' if showbank else '')+'<th>Branch</th><th>Address line</th><th>City</th>'+('<th>Province</th>' if showprov else '')+'<th>Postal code</th></tr>'
+    t='<div class="wrap"><table><tr>'+('<th>Bank</th>' if showbank else '')+'<th>Branch</th><th>Address line</th><th>City</th>'+('<th>Province</th>' if showprov else '')+'<th>Postal code</th><th>Directions</th></tr>'
+    points=[]
     for b in sorted(rows,key=lambda x:(x.get('_bank',''),x['city'],x['branchName'])):
-        t+='<tr>'+(f"<td>{b['_bank']}</td>" if showbank else '')+f"<td>{H.escape(b['branchName'])}</td><td>{H.escape(b['suburb'])}</td><td>{H.escape(b['city'])}</td>"+(f"<td>{b['province']}</td>" if showprov else '')+f"<td>{b['postal_code']}</td></tr>"
+        addr=dp_address(b)
+        t+='<tr>'+(f"<td>{b['_bank']}</td>" if showbank else '')+f"<td>{H.escape(b['branchName'])}</td><td>{H.escape(b['suburb'])}</td><td>{H.escape(b['city'])}</td>"+(f"<td>{b['province']}</td>" if showprov else '')+f"<td>{b['postal_code']}</td><td>{dir_link(addr,b['branchName'])}</td></tr>"
+        hit=pin_for(BANK_KEY[b['_bank']],b['branchName'],b['suburb'],b['city'],b['postal_code'])
+        if hit: points.append(point_from(b['branchName'],addr,hit[0],hit[1]))
+    return t+'</table></div>',points
+def legacy_address(l):
+    return ", ".join(p for p in [l['name'],l['city'],l['prov'],"South Africa"] if p)
+def legacy_table(rows,showprov):
+    t='<div class="wrap"><table><tr><th>Branch</th><th>City</th>'+('<th>Province</th>' if showprov else '')+'<th>Phone (as listed)</th><th>Directions</th></tr>'
+    for l in rows:
+        t+=f'<tr><td>{H.escape(l["name"])}</td><td>{H.escape(l["city"])}</td>'+(f'<td>{H.escape(l["prov"])}</td>' if showprov else '')+f'<td>{H.escape(l["phone"])}</td><td>{dir_link(legacy_address(l),l["name"])}</td></tr>'
     return t+'</table></div>'
+def ned_section():
+    points=[]
+    t='<div class="wrap"><table><tr><th>Branch</th><th>City</th><th>Address</th><th>Directions</th></tr>'
+    for name,city,line,prov in NED_BRANCHES:
+        addr=", ".join(p for p in [name,line,city,prov,"South Africa"] if p)
+        t+=f'<tr><td>{H.escape(name)}</td><td>{H.escape(city)}</td><td>{H.escape(line)}</td><td>{dir_link(addr,name)}</td></tr>'
+        hit=pin_for("nedbank",name,line,city,"")
+        if hit: points.append(point_from(name,addr,hit[0],hit[1]))
+    t+='</table></div>'
+    return f'<h2>Nedbank branches (per Nedbank)</h2><p>Addresses as published by Nedbank. Confirm the branch before you go.</p>{map_html(points,"Map of Nedbank branches with a placed address")}{t}'
 FILTER='''<div class="branch-filter"><label for="branch-filter">Filter by town, mall or branch name</label><input id="branch-filter" type="search" placeholder="Town, mall or branch name" autocomplete="off" oninput="var v=this.value.toLowerCase();document.querySelectorAll('table tr').forEach(function(r,i){if(r.querySelector('td'))r.style.display=r.textContent.toLowerCase().indexOf(v)>-1?'':'none'})"></div>'''
 for pid,n,s in BANKS:
     if s in dp:
@@ -604,22 +669,18 @@ info={
 <li>Children under 18: different requirements; Nedbank refers you to DHA{src('ned')}.</li>
 <li>Must you be a Nedbank client? Payment is described via Nedbank Money app or Online Banking; whether other payers are accepted is not stated by source.</li>
 <li>Passports: Nedbank says DHA officials issue IDs and passports at these branches{src('ned')}.</li>
-<li>Extra Nedbank fee: not stated by source.</li></ul>
-<h2>Nedbank branches (per Nedbank)</h2><div class="wrap"><table><tr><th>Branch</th><th>City</th><th>Address</th></tr>
-<tr><td>Nedbank Arcadia Pretoria</td><td>Pretoria</td><td>Shop 25, Nedbank Plaza, Beatrix Street</td></tr>
-<tr><td>Nedbank Sandown</td><td>Sandown</td><td>Shop L05, Lower Ground, Block, 135 Rivonia Road</td></tr>
-<tr><td>Nedbank St Georges Mall</td><td>Cape Town</td><td>Shop 3 The Box, St Georges Mall c/o Riebeeck Street</td></tr>
-<tr><td>Nedbank Nelspruit</td><td>Nelspruit</td><td>Shop 1, Nedbank Centre, 30 Brown Street</td></tr>
-<tr><td>Nedbank Durban North</td><td>Durban</td><td>57 Adelaide Tambo Drive</td></tr>
-<tr><td>Nedbank Lakeview Office Park</td><td>Roodepoort</td><td>16 Constantia Blvd, Constantia Kloof</td></tr></table></div>'''),
+<li>Extra Nedbank fee: not stated by source.</li></ul>'''),
 }
 for pid,n,s in BANKS:
     b=f'<h1>{n}: Smart ID and passport at branches</h1><div class="card">{info[s]}</div><p>Booking steps for this bank, and how they differ from a Home Affairs office appointment (BABS): <a href="../../booking-and-walk-ins/index.html">Booking and walk-ins</a>. Replacing a lost or stolen card, and where a source mentions an affidavit or the police: <a href="../../lost-or-stolen-smart-id/index.html">Replacing a lost or stolen Smart ID</a>. A first Smart ID at 16, and whether this bank states that it takes one: <a href="../../first-smart-id-at-16/index.html">First Smart ID at 16</a>. When the document is ready, what this bank says about collection: <a href="../../collecting-smart-id-or-passport/index.html">Collecting a Smart ID or passport</a>. Switching from a green ID book, including whether that book is still valid: <a href="../../green-id-book-to-smart-id/index.html">Green ID book to Smart ID</a>. Applying for a passport, and whether this bank page names one: <a href="../../applying-for-a-passport/index.html">Applying for a passport</a>. A forename or surname change, then a new Smart ID: <a href="../../name-or-surname-change/index.html">Name or surname change</a>.</p>'
     if s in dp:
-        b+=f'<h2>{n} Digital Partnership branches ({len(dp[s])}){src("locator")}</h2><p>Data from the DHA partner branch locator on {D}. Confirm before visiting.</p>{FILTER}{dptable(dp[s],showprov=True)}'
+        table,points=dptable(dp[s],showprov=True)
+        b+=f'<h2>{n} Digital Partnership branches ({len(dp[s])}){src("locator")}</h2><p>Data from the DHA partner branch locator on {D}. Confirm before visiting.</p>{map_html(points,"Map of "+n+" branches with a placed address")}{FILTER}{table}'
+    if s=="nedbank":
+        b+=ned_section()
     lg=[l for l in leg if l['name'].upper().startswith(n.upper().split()[0])]
     if lg:
-        b+=f'<h2>{n} eHomeAffairs bank branches listed by DHA{src("legacy")}</h2><p>Booking required; DHA states no walk-ins.</p><div class="wrap"><table><tr><th>Branch</th><th>City</th><th>Province</th><th>Phone (as listed)</th></tr>'+''.join(f'<tr><td>{H.escape(l["name"])}</td><td>{H.escape(l["city"])}</td><td>{l["prov"]}</td><td>{l["phone"]}</td></tr>' for l in lg)+'</table></div>'
+        b+=f'<h2>{n} eHomeAffairs bank branches listed by DHA{src("legacy")}</h2><p>Booking required; DHA states no walk-ins.</p>{legacy_table(lg,True)}'
     page(f'banks/{s}/index.html',bank_title(n),b,bank_desc(n))
 # PROVINCES
 pi='<h1>Branches by province</h1><ul>'+''.join(f'<li><a href="provinces/{slug(p)}/index.html">{p}</a></li>' for p in PROV)+'</ul>'
@@ -627,10 +688,11 @@ page('provinces/index.html',"Smart ID at banks by province: Capitec, FNB, Absa b
 PROVBANK={'Eastern Cape':'ecb','Free State':'fsb','Gauteng':'gtb','KwaZulu-Natal':'kznb','Limpopo':'limb','Mpumalanga':'mpub','North West':'nwb','Northern Cape':'ncb','Western Cape':'wcb'}
 for p in PROV:
     rows=[b for s in dp for b in dp[s] if b['province']==p]
-    b=f'<h1>Smart ID bank branches in {p}</h1><p>{len(rows)} Digital Partnership branches listed in the DHA locator on {D}{src("locator")}. These handle Smart ID re-issues and green ID book conversions{src("digital")}. Check each <a href="../../index.html">bank\'s rules</a> (most require you to be a client). Whether the green ID book is still valid, and what each bank says about that switch: <a href="../../green-id-book-to-smart-id/index.html">Green ID book to Smart ID</a>.</p>{FILTER}{dptable(rows,showbank=True)}'
+    table,points=dptable(rows,showbank=True)
+    b=f'<h1>Smart ID bank branches in {p}</h1><p>{len(rows)} Digital Partnership branches listed in the DHA locator on {D}{src("locator")}. These handle Smart ID re-issues and green ID book conversions{src("digital")}. Check each <a href="../../index.html">bank\'s rules</a> (most require you to be a client). Whether the green ID book is still valid, and what each bank says about that switch: <a href="../../green-id-book-to-smart-id/index.html">Green ID book to Smart ID</a>.</p>{map_html(points,"Map of bank branches in "+p+" with a placed address")}{FILTER}{table}'
     lg=[l for l in leg if l['prov']==p]
     b+=f'<h2>eHomeAffairs bank branches in {p}{src("legacy")}</h2>'
-    if lg: b+=f'<p>Apply and book online first. DHA\'s {p} bank-branch page says no walk-ins are allowed at banks{src(PROVBANK[p])}. See <a href="../../booking-and-walk-ins/index.html">Booking and walk-ins</a>.</p><div class="wrap"><table><tr><th>Branch</th><th>City</th><th>Phone (as listed)</th></tr>'+''.join(f'<tr><td>{H.escape(l["name"])}</td><td>{H.escape(l["city"])}</td><td>{l["phone"]}</td></tr>' for l in lg)+'</table></div>'
+    if lg: b+=f'<p>Apply and book online first. DHA\'s {p} bank-branch page says no walk-ins are allowed at banks{src(PROVBANK[p])}. See <a href="../../booking-and-walk-ins/index.html">Booking and walk-ins</a>.</p>{legacy_table(lg,False)}'
     else: b+='<p>DHA lists none for this province.</p>'
     page(f'provinces/{slug(p)}/index.html',province_title(p),b,province_desc(p))
 PROVLINKS=' '.join(f'<a href="{S[k]}" rel="noopener">{label}</a>' for k,label in [('ecb','Eastern Cape'),('fsb','Free State'),('gtb','Gauteng'),('kznb','KwaZulu-Natal'),('limb','Limpopo'),('mpub','Mpumalanga'),('nwb','North West'),('ncb','Northern Cape'),('wcb','Western Cape')])
@@ -1420,6 +1482,16 @@ def write_images():
     try:
         from PIL import Image, ImageDraw, ImageFont
     except ImportError:
+        og,icon=f"{OUT}/og.png",f"{OUT}/apple-touch-icon.png"
+        def wh(path):
+            if not os.path.isfile(path): return None
+            with open(path,"rb") as f:
+                sig=f.read(16)
+                if sig[:8]!=b"\x89PNG\r\n\x1a\n": return None
+                return int.from_bytes(f.read(4),"big"), int.from_bytes(f.read(4),"big")
+        if wh(og)==(1200,630) and wh(icon)==(180,180):
+            print("WARNING Pillow is not installed; keeping the existing brand images")
+            return
         print("WARNING Pillow is not installed; writing a plain brand image")
         write_plain_images(); return
     bold,medium,regular=font_file(True),font_file(False),font_file(False)
@@ -1538,8 +1610,47 @@ def check_internal():
     if BASE+'/find/' not in sm:
         raise SystemExit('Sitemap is missing the find page')
     print(len(pages),'html files, internal links ok')
+def publish_map_assets():
+    import shutil
+    src=os.path.join(HERE,"vendor","leaflet")
+    dst=os.path.join(OUT,"vendor","leaflet")
+    if os.path.isdir(dst): shutil.rmtree(dst)
+    shutil.copytree(src, dst)
+    shutil.copy(os.path.join(HERE,"map.js"), os.path.join(OUT,"map.js"))
+def check_maps():
+    js=open(os.path.join(OUT,"map.js"),encoding="utf-8").read()
+    css=open(os.path.join(HERE,"shell.css"),encoding="utf-8").read()
+    if "scrollWheelZoom: false" not in js: raise SystemExit("Map still zooms on scroll before a click")
+    if "https://www.openstreetmap.org/copyright" not in js: raise SystemExit("Missing OpenStreetMap attribution")
+    if "tile.openstreetmap.org" not in js: raise SystemExit("Map tiles are not OpenStreetMap")
+    if "z-index:40" not in css or "z-index:1" not in css: raise SystemExit("Header must stay above the map")
+    for rel in ("vendor/leaflet/leaflet.js","vendor/leaflet/leaflet.css","vendor/leaflet/images/marker-icon.png","vendor/leaflet/images/marker-shadow.png"):
+        if not os.path.isfile(os.path.join(OUT, rel)): raise SystemExit("Missing "+rel)
+    pages=[]
+    pin_total=0
+    for dirpath,_,files in os.walk(OUT):
+        for fn in files:
+            if not fn.endswith(".html"): continue
+            path=os.path.relpath(os.path.join(dirpath, fn), OUT)
+            html=open(os.path.join(OUT, path), encoding="utf-8").read()
+            if "maps/embed" in html or "maps.googleapis" in html: raise SystemExit("Unexpected Google map embed on "+path)
+            if 'id="branch-map"' in html:
+                if html.count('id="branch-map"')!=1: raise SystemExit("Duplicate map on "+path)
+                if 'role="region"' not in html or "aria-label=\"Map of " not in html: raise SystemExit("Map name missing on "+path)
+                if 'src="/map.js"' not in html: raise SystemExit("Map script missing on "+path)
+                if "Get directions" not in html: raise SystemExit("Directions missing on "+path)
+                pages.append(path)
+                pin_total+=html.count('"lat":')
+            if path.startswith("banks/") or path.startswith("provinces/") and path!="provinces/index.html":
+                rows=len(re.findall(r"<tr><td>", html))
+                dirs=html.count("https://www.google.com/maps/dir/?api=1&amp;destination=")
+                if rows and rows!=dirs: raise SystemExit(f"Directions {dirs} do not match rows {rows} on {path}")
+                if 'target="_blank"' in html and 'rel="noopener"' not in html: raise SystemExit("Directions tab is missing rel=noopener on "+path)
+    print(len(pages),"map pages,",pin_total,"pins on those pages")
+publish_map_assets()
 check_contrast()
 check_internal()
+check_maps()
 
 print(total,len(leg),len(PATHS))
 if META_WARNINGS:
