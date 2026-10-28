@@ -4,11 +4,11 @@ Independent, unofficial static guide to Smart ID and passport services at South 
 
 This is not affiliated with DHA or any bank. Rules change often. Confirm on the official source before you travel.
 
-The pages were last checked on 26 October 2026. That date is baked into the HTML.
+Most pages were last checked on 26 October 2026. That date is baked into the generator. The name or surname change page is marked 27 October 2026.
 
 ## Pages
 
-Guides, bank pages and province pages, plus `robots.txt`. The generator writes every HTML page. Current guides include fees and documents, booking and walk-ins, a lost or stolen Smart ID, a first Smart ID at 16, collecting a Smart ID or passport, the green ID book, and applying for a passport.
+Guides, bank pages and province pages, plus `robots.txt`. The generator writes every HTML page. Current guides include fees and documents, booking and walk-ins, a lost or stolen Smart ID, a name or surname change, a first Smart ID at 16, collecting a Smart ID or passport, the green ID book, and applying for a passport.
 
 - Home (`site/index.html`)
 - Fees and documents
