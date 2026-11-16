@@ -146,21 +146,8 @@ h3{font-size:1.05rem;margin:var(--s24) 0 var(--s12)}
 .inshort{background:#eef4f1;border-left:6px solid #1d4f3e;border-radius:10px;padding:var(--s16);margin:0 0 var(--s24)}
 .inshort p{margin:0}
 .layout{display:flex;flex-direction:column;gap:var(--s24);min-width:0;margin-top:var(--s24)}
-.toc{order:-1}
-.rest{order:0;min-width:0}
+.rest{min-width:0}
 .rest>h2:first-child,.rest>h3:first-child{margin-top:0}
-@media(min-width:960px){
-  .layout.has-toc{display:grid;grid-template-columns:minmax(0,1fr) 18rem;column-gap:var(--s32);align-items:start}
-  .layout.has-toc .rest{grid-column:1;grid-row:1;order:0}
-  .layout.has-toc .toc{grid-column:2;grid-row:1;order:0;position:sticky;top:var(--scroll-pad);max-height:calc(100vh - var(--scroll-pad) - var(--s16));overflow:auto}
-}
-.toc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:var(--s12) var(--s16) var(--s16);margin:0}
-.toc summary{min-height:48px;display:flex;align-items:center;font-weight:700;cursor:pointer}
-.toc ul{list-style:none;margin:0;padding:0 0 var(--s12)}
-.toc a{display:flex;align-items:center;min-height:44px;padding:var(--s12) 0}
-@media(min-width:960px){
-  .toc summary{min-height:44px;padding:var(--s12) 0;font-size:1.25rem;line-height:1.25}
-}
 .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:var(--s16);margin:var(--s16) 0}
 h2+.card,h3+.card{margin-top:var(--s12)}
 .card>:first-child{margin-top:0}
@@ -241,7 +228,7 @@ footer p{margin:0 0 var(--s16)}
   .map-canvas{height:420px}
 }
 @media(forced-colors:active){
-  .card,.inshort,.notice,.jump,.toc,.pn a,.menu summary,.search-toggle,.sitesearch button,.loc-map,.map-use{border:1px solid CanvasText}
+  .card,.inshort,.notice,.jump,.pn a,.menu summary,.search-toggle,.sitesearch button,.loc-map,.map-use{border:1px solid CanvasText}
   .sitesearch button,.map-use{background:ButtonFace;color:ButtonText}
 }
 </style><script defer src="/_vercel/insights/script.js"></script></head><body>
@@ -259,7 +246,7 @@ footer p{margin:0 0 var(--s16)}
 <p>This page is for a passport application: where the Department of Home Affairs (DHA) says you can lodge it, which bank page names a passport, what to carry, who must attend for a child, and which fee each official page prints. It does not repeat the tariff table. That table is on <a href="/fees-and-documents/">Fees and documents</a>. How to book a Home Affairs office, and how a bank visit differs, is on <a href="/booking-and-walk-ins/">Booking and walk-ins</a>. Notice, place, and any deadline after the passport is ready: <a href="/collecting-smart-id-or-passport/">Collecting a Smart ID or passport</a>. A first identity document, which a person of 16 or older needs before a passport: <a href="/first-smart-id-at-16/">First Smart ID at 16</a>.</p>
 <div class="card note"><strong>Official pages do not agree on whether a bank can take a passport today.</strong>
 <p>The Digital Partnership page lists a passport application during phase 1 as not yet available, and it says clients who need that service must visit a Home Affairs office <span class="src">[<a href="https://www.dha.gov.za/index.php/id-smart-card/banks-digital" rel="noopener">source</a>]</span>. The partner-branch page says DHA now offers adult tourist passport applications at participating bank branches, and that the passport service is currently available <span class="src">[<a href="https://myhomeaffairsonline.dha.gov.za/partner-branch" rel="noopener">source</a>]</span>. A gov.za statement of 26 October 2026 says the Department will shortly roll out passport services through these bank branches <span class="src">[<a href="https://www.gov.za/news/media-statements/home-affairs-milestone-one-million-smart-ids-delivered-seven-months-26-oct" rel="noopener">source</a>]</span>. "Will shortly" and "currently available" are not the same tense. This page was checked on 26 October 2026, and it does not choose a tense for you.</p></div>
-</div><div class="layout has-toc"><nav class="toc" aria-label="On this page" tabindex="0"><details class="toc-details"><summary>On this page</summary><ul><li><a href="#where-an-application-can-be-lodged">Where an application can be lodged</a></li><li><a href="#who-may-apply-and-for-which-passport">Who may apply, and for which passport</a></li><li><a href="#what-each-bank-s-own-page-says">What each bank&#x27;s own page says</a></li><li><a href="#documents-for-an-adult-application">Documents for an adult application</a></li><li><a href="#a-child-and-consent-under-18">A child, and consent under 18</a></li><li><a href="#what-you-pay">What you pay</a></li><li><a href="#temporary-passports-and-an-emergency-certificate">Temporary passports, and an emergency certificate</a></li><li><a href="#other-travel-documents">Other travel documents</a></li><li><a href="#what-these-sources-do-not-state">What these sources do not state</a></li></ul></details><script>if(window.matchMedia("(min-width:960px)").matches){var d=document.currentScript.previousElementSibling;if(d&&d.tagName==="DETAILS")d.open=true;}</script></nav><div class="rest"><h2 id="where-an-application-can-be-lodged">Where an application can be lodged</h2>
+</div><div class="layout"><div class="rest"><h2 id="where-an-application-can-be-lodged">Where an application can be lodged</h2>
 <div class="card"><p>South African passports and travel documents are issued in terms of the South African Passports and Travel Documents Act, No. 4 of 1994, and the related regulations. The travel documents page says an application inside South Africa can be submitted at any Home Affairs front office with live capture (it also says a Smart ID card office), at participating banks, or through eHomeAffairs. For the banks, that page says to refer to the DHA website for a list. An application outside the country goes to the nearest South African embassy or consulate <span class="src">[<a href="https://www.dha.gov.za/index.php/civic-services/travel-documents" rel="noopener">source</a>]</span>.</p>
 <ul>
 <li>The application must be made in person, whether it is lodged in South Africa or abroad <span class="src">[<a href="https://www.dha.gov.za/index.php/civic-services/travel-documents" rel="noopener">source</a>]</span>.</li>

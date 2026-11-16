@@ -146,21 +146,8 @@ h3{font-size:1.05rem;margin:var(--s24) 0 var(--s12)}
 .inshort{background:#eef4f1;border-left:6px solid #1d4f3e;border-radius:10px;padding:var(--s16);margin:0 0 var(--s24)}
 .inshort p{margin:0}
 .layout{display:flex;flex-direction:column;gap:var(--s24);min-width:0;margin-top:var(--s24)}
-.toc{order:-1}
-.rest{order:0;min-width:0}
+.rest{min-width:0}
 .rest>h2:first-child,.rest>h3:first-child{margin-top:0}
-@media(min-width:960px){
-  .layout.has-toc{display:grid;grid-template-columns:minmax(0,1fr) 18rem;column-gap:var(--s32);align-items:start}
-  .layout.has-toc .rest{grid-column:1;grid-row:1;order:0}
-  .layout.has-toc .toc{grid-column:2;grid-row:1;order:0;position:sticky;top:var(--scroll-pad);max-height:calc(100vh - var(--scroll-pad) - var(--s16));overflow:auto}
-}
-.toc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:var(--s12) var(--s16) var(--s16);margin:0}
-.toc summary{min-height:48px;display:flex;align-items:center;font-weight:700;cursor:pointer}
-.toc ul{list-style:none;margin:0;padding:0 0 var(--s12)}
-.toc a{display:flex;align-items:center;min-height:44px;padding:var(--s12) 0}
-@media(min-width:960px){
-  .toc summary{min-height:44px;padding:var(--s12) 0;font-size:1.25rem;line-height:1.25}
-}
 .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:var(--s16);margin:var(--s16) 0}
 h2+.card,h3+.card{margin-top:var(--s12)}
 .card>:first-child{margin-top:0}
@@ -241,7 +228,7 @@ footer p{margin:0 0 var(--s16)}
   .map-canvas{height:420px}
 }
 @media(forced-colors:active){
-  .card,.inshort,.notice,.jump,.toc,.pn a,.menu summary,.search-toggle,.sitesearch button,.loc-map,.map-use{border:1px solid CanvasText}
+  .card,.inshort,.notice,.jump,.pn a,.menu summary,.search-toggle,.sitesearch button,.loc-map,.map-use{border:1px solid CanvasText}
   .sitesearch button,.map-use{background:ButtonFace;color:ButtonText}
 }
 </style><script defer src="/_vercel/insights/script.js"></script></head><body>
@@ -258,7 +245,7 @@ footer p{margin:0 0 var(--s16)}
 <main id="content" tabindex="-1"><div class="notice" role="note"><div class="shell"><p class="disclaimer">For general information only. This independent site is not affiliated with any government, bank or agency. <a href="/disclaimer/">Disclaimer</a>.</p></div></div><div class="shell"><nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/#which-document">Which document</a></li><li><span aria-current="page">Name or surname change</span></li></ol></nav><p class="meta"><span class="checked">Last checked: 27 October 2026</span></p><article class="content" aria-labelledby="page-title"><div class="head-block"><h1 id="page-title">Changing a name or surname, then a new Smart ID</h1><div class="inshort"><p><strong>In short.</strong> A forename or surname change is done at Home Affairs, not at a bank. Official pages do not all use the same route, the same documents or the same fee, and a new Smart ID is a separate application.</p></div>
 <p>A common question is whether a bank can change the name on a Smart ID, and whether getting married is enough on its own. This page sets out what the Department of Home Affairs (DHA) amendments page, the fees page, the identity documents page, the Births and Deaths Registration Act and the 2014 regulations, and each bank page actually say. It does not copy the passport document list. That list is on <a href="/applying-for-a-passport/">Applying for a passport</a>. A lost or stolen card is on <a href="/lost-or-stolen-smart-id/">Replacing a lost or stolen Smart ID</a>.</p>
 <p>The DHA amendments page is headed "Amendments in ID Books &amp; Birth Certificates (ADULTS)". It says the forms it mentions are provided at a Home Affairs office, unless otherwise specified <span class="src">[<a href="https://www.dha.gov.za/index.php/amendments" rel="noopener">source</a>]</span>. The gov.za service page lists the kinds of amendment, including altering a forename, altering a minor's surname, and assuming a different surname, and it says to find out more or contact DHA. It does not print documents or fees <span class="src">[<a href="https://www.gov.za/services/services-residents/citizenship/personal-identification/amend-information-on-population-register" rel="noopener">source</a>]</span>.</p>
-</div><div class="layout has-toc"><nav class="toc" aria-label="On this page" tabindex="0"><details class="toc-details"><summary>On this page</summary><ul><li><a href="#a-bank-does-not-change-the-name">A bank does not change the name</a></li><li><a href="#a-surname-after-marriage-or-divorce">A surname after marriage or divorce</a></li><li><a href="#assuming-another-surname">Assuming another surname</a></li><li><a href="#changing-a-forename">Changing a forename</a></li><li><a href="#correcting-a-spelling">Correcting a spelling</a></li><li><a href="#what-you-pay">What you pay</a></li><li><a href="#the-new-smart-id">The new Smart ID</a></li><li><a href="#a-passport-uses-the-registered-name">A passport uses the registered name</a></li><li><a href="#a-child-s-surname">A child&#x27;s surname</a></li><li><a href="#where-the-official-pages-do-not-match">Where the official pages do not match</a></li><li><a href="#what-these-sources-do-not-state">What these sources do not state</a></li></ul></details><script>if(window.matchMedia("(min-width:960px)").matches){var d=document.currentScript.previousElementSibling;if(d&&d.tagName==="DETAILS")d.open=true;}</script></nav><div class="rest"><h2 id="a-bank-does-not-change-the-name">A bank does not change the name</h2>
+</div><div class="layout"><div class="rest"><h2 id="a-bank-does-not-change-the-name">A bank does not change the name</h2>
 <div class="card"><p>On the Digital Partnership page, name changes and amendments to personal details are not yet available at bank branches. Clients who need those services must visit a Home Affairs office. The services that page does list are Smart ID card re-issues (lost, stolen or damaged) and green ID book to Smart ID card replacements <span class="src">[<a href="https://www.dha.gov.za/index.php/id-smart-card/banks-digital" rel="noopener">source</a>]</span>. A re-issue because a surname has already been changed is not in the available list, and it is not in the not-yet list.</p>
 <p>Standard Bank's own question is whether you can apply for your new smart ID with the bank if you want to change your surname. The answer is no. The bank says it cannot currently assist with change of surname requests, and that you will be required to visit a Home Affairs branch to complete an application that includes a surname change <span class="src">[<a href="https://www.standardbank.co.za/southafrica/personal/products-and-services/ways-to-bank/self-service-banking/get-your-smart-id-or-passport" rel="noopener">source</a>]</span>.</p>
 <p>The same Standard Bank page, in the in-branch list and in the online list, names a smart ID replacement due to marriage or divorce after your surname has been changed at the Home Affairs office <span class="src">[<a href="https://www.standardbank.co.za/southafrica/personal/products-and-services/ways-to-bank/self-service-banking/get-your-smart-id-or-passport" rel="noopener">source</a>]</span>. If the ID contains incorrect information, Standard Bank says you must follow the DHA amendment process at one of their offices <span class="src">[<a href="https://www.standardbank.co.za/southafrica/personal/products-and-services/ways-to-bank/self-service-banking/get-your-smart-id-or-passport" rel="noopener">source</a>]</span>. Those are three different sentences. This page does not fold them into one.</p></div>

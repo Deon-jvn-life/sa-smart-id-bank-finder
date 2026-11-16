@@ -146,21 +146,8 @@ h3{font-size:1.05rem;margin:var(--s24) 0 var(--s12)}
 .inshort{background:#eef4f1;border-left:6px solid #1d4f3e;border-radius:10px;padding:var(--s16);margin:0 0 var(--s24)}
 .inshort p{margin:0}
 .layout{display:flex;flex-direction:column;gap:var(--s24);min-width:0;margin-top:var(--s24)}
-.toc{order:-1}
-.rest{order:0;min-width:0}
+.rest{min-width:0}
 .rest>h2:first-child,.rest>h3:first-child{margin-top:0}
-@media(min-width:960px){
-  .layout.has-toc{display:grid;grid-template-columns:minmax(0,1fr) 18rem;column-gap:var(--s32);align-items:start}
-  .layout.has-toc .rest{grid-column:1;grid-row:1;order:0}
-  .layout.has-toc .toc{grid-column:2;grid-row:1;order:0;position:sticky;top:var(--scroll-pad);max-height:calc(100vh - var(--scroll-pad) - var(--s16));overflow:auto}
-}
-.toc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:var(--s12) var(--s16) var(--s16);margin:0}
-.toc summary{min-height:48px;display:flex;align-items:center;font-weight:700;cursor:pointer}
-.toc ul{list-style:none;margin:0;padding:0 0 var(--s12)}
-.toc a{display:flex;align-items:center;min-height:44px;padding:var(--s12) 0}
-@media(min-width:960px){
-  .toc summary{min-height:44px;padding:var(--s12) 0;font-size:1.25rem;line-height:1.25}
-}
 .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:var(--s16);margin:var(--s16) 0}
 h2+.card,h3+.card{margin-top:var(--s12)}
 .card>:first-child{margin-top:0}
@@ -241,7 +228,7 @@ footer p{margin:0 0 var(--s16)}
   .map-canvas{height:420px}
 }
 @media(forced-colors:active){
-  .card,.inshort,.notice,.jump,.toc,.pn a,.menu summary,.search-toggle,.sitesearch button,.loc-map,.map-use{border:1px solid CanvasText}
+  .card,.inshort,.notice,.jump,.pn a,.menu summary,.search-toggle,.sitesearch button,.loc-map,.map-use{border:1px solid CanvasText}
   .sitesearch button,.map-use{background:ButtonFace;color:ButtonText}
 }
 </style><script defer src="/_vercel/insights/script.js"></script></head><body>
@@ -257,7 +244,7 @@ footer p{margin:0 0 var(--s16)}
 </div></header></div>
 <main id="content" tabindex="-1"><div class="notice" role="note"><div class="shell"><p class="disclaimer">For general information only. This independent site is not affiliated with any government, bank or agency. <a href="/disclaimer/">Disclaimer</a>.</p></div></div><div class="shell"><nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/#using-this-guide">Using this guide</a></li><li><span aria-current="page">Disclaimer</span></li></ol></nav><p class="meta"><span class="checked">Last checked: 24 October 2026</span></p><article class="content" aria-labelledby="page-title"><div class="head-block"><h1 id="page-title">Disclaimer</h1><div class="inshort"><p><strong>In short.</strong> This independent site is not affiliated with any government, bank or agency. General information only, with no warranty and no liability for how you use it.</p></div>
 <p>For general information only. This independent site is not affiliated with any government, bank or agency. Information can change and may contain errors; always confirm with the official source before you act. Nothing here is legal, financial or professional advice, and we accept no liability for decisions made using it.</p>
-</div><div class="layout has-toc"><nav class="toc" aria-label="On this page" tabindex="0"><details class="toc-details" open><summary>On this page</summary><ul><li><a href="#accuracy">Accuracy</a></li><li><a href="#no-warranty">No warranty</a></li><li><a href="#limitation-of-liability">Limitation of liability</a></li><li><a href="#external-links-are-not-endorsed">External links are not endorsed</a></li><li><a href="#not-affiliated">Not affiliated</a></li><li><a href="#check-official-sources">Check official sources</a></li><li><a href="#contact-and-corrections">Contact and corrections</a></li></ul></details><script>if(window.matchMedia("(min-width:960px)").matches){var d=document.currentScript.previousElementSibling;if(d&&d.tagName==="DETAILS")d.open=true;}</script></nav><div class="rest"><h2 id="accuracy">Accuracy</h2>
+</div><div class="layout"><div class="rest"><h2 id="accuracy">Accuracy</h2>
 <p>Pages on this site are written from Department of Home Affairs, gov.za and bank pages, and those pages are linked next to the facts. The wording can still be wrong, incomplete or out of date. A branch list, a fee, a document rule or a walk-in rule can change after the Last checked date on a page. Nothing here is a promise that a branch will accept an application on the day you visit.</p>
 <h2 id="no-warranty">No warranty</h2>
 <p>The site is general information only. We give no warranty, express or implied, that the pages are accurate, complete, current or fit for any purpose. We do not promise that the site will always be available.</p>
