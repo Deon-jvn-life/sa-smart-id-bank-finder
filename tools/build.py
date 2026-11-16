@@ -100,7 +100,6 @@ for o in json.load(open(os.path.join(HERE,'legacy.json'))):
 CSS=open(os.path.join(HERE,"shell.css"),encoding="utf-8").read()
 SHELL_JS=open(os.path.join(HERE,"shell.js"),encoding="utf-8").read()
 MARK='<svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect x="1" y="5" width="30" height="22" rx="3" fill="none" stroke="#fff" stroke-width="2"/><circle cx="11" cy="16" r="3.2" fill="#FFB81C"/><rect x="17" y="12" width="9" height="2" rx="1" fill="#fff"/><rect x="17" y="17" width="7" height="2" rx="1" fill="#E7F2EC"/></svg>'
-TOC_BOOT='<script>if(window.matchMedia("(min-width:960px)").matches){var d=document.currentScript.previousElementSibling;if(d&&d.tagName==="DETAILS")d.open=true;}</script>'
 
 PATHS=[]
 META_WARNINGS=[]
@@ -262,18 +261,6 @@ def page(path,title,body,desc,checked=None,faq=None,article=True,sitemap=True,ro
         i=unique_slug(m.group(1), seen)
         return f'<h2 id="{i}">{m.group(1)}</h2>'
     body=re.sub(r'<h2>(.*?)</h2>', addid, body, flags=re.S)
-    h2_pairs=[]
-    for m in re.finditer(r'<h2\b([^>]*)>(.*?)</h2>', body, flags=re.S):
-        idm=re.search(r'\bid="([^"]+)"', m.group(1))
-        if not idm: continue
-        hid=idm.group(1)
-        if hid=='read-next': continue
-        h2_pairs.append((hid, heading_plain(m.group(2))))
-    toc=''
-    if len(h2_pairs)>=3:
-        opened=' open' if len(h2_pairs)<=8 else ''
-        lis=''.join(f'<li><a href="#{hid}">{H.escape(label)}</a></li>' for hid, label in h2_pairs)
-        toc=f'<nav class="toc" aria-label="On this page" tabindex="0"><details class="toc-details"{opened}><summary>On this page</summary><ul>{lis}</ul></details>{TOC_BOOT}</nav>'
     split_at=re.search(r'<h2\b', body)
     if not split_at:
         lead, rest = body, ''
@@ -341,7 +328,6 @@ def page(path,title,body,desc,checked=None,faq=None,article=True,sitemap=True,ro
     meta=f'<p class="meta"><span class="checked">Last checked: {when}</span></p>'
     pn=series_nav(path)
     readnext=read_next_html(path)
-    layout_cls='layout has-toc' if toc else 'layout'
     foot=(f'<footer><div class="shell"><nav class="footnav" aria-label="About this guide"><a href="/find/">All pages</a><a href="/disclaimer/">Disclaimer</a></nav>'
           f'<p>{H.escape(DISCLAIMER)}</p><p><a href="/disclaimer/">Disclaimer</a></p>'
           f'<p>Related guides: <a href="{RELATED_GUIDE}">Passport and ID guide for South Africans in the USA</a>.</p>'
@@ -359,7 +345,7 @@ def page(path,title,body,desc,checked=None,faq=None,article=True,sitemap=True,ro
 <nav id="site-nav" class="top" aria-label="Topics" tabindex="0">{nav}</nav>
 <span class="nav-fade nav-fade-left" aria-hidden="true"></span><span class="nav-fade nav-fade-right" aria-hidden="true"></span><span class="nav-hint" aria-hidden="true"></span>
 </div></header></div>
-<main id="content" tabindex="-1">{notice}<div class="shell">{crumbs_html}{meta}<article class="content" aria-labelledby="page-title"><div class="head-block">{lead}</div><div class="{layout_cls}">{toc}<div class="rest">{rest}{pn}{readnext}</div></div></article></div></main>
+<main id="content" tabindex="-1">{notice}<div class="shell">{crumbs_html}{meta}<article class="content" aria-labelledby="page-title"><div class="head-block">{lead}</div><div class="layout"><div class="rest">{rest}{pn}{readnext}</div></div></article></div></main>
 {foot}
 {search_tag}{map_script}</body></html>'''
     h=clean_links(h, path)
@@ -1722,6 +1708,8 @@ def check_internal():
                 raise SystemExit(f'Missing {needle!r} on {path}')
         if 'rel="canonical"' not in html:
             raise SystemExit('Missing canonical on '+path)
+        if 'On this page' in html or 'class="toc"' in html or 'has-toc' in html or 'toc-details' in html:
+            raise SystemExit('On this page box leaked onto '+path)
     sm=open(os.path.join(OUT,'sitemap.xml'),encoding='utf-8').read()
     if BASE+'/find/' not in sm:
         raise SystemExit('Sitemap is missing the find page')

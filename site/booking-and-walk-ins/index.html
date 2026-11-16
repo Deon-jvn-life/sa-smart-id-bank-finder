@@ -146,21 +146,8 @@ h3{font-size:1.05rem;margin:var(--s24) 0 var(--s12)}
 .inshort{background:#eef4f1;border-left:6px solid #1d4f3e;border-radius:10px;padding:var(--s16);margin:0 0 var(--s24)}
 .inshort p{margin:0}
 .layout{display:flex;flex-direction:column;gap:var(--s24);min-width:0;margin-top:var(--s24)}
-.toc{order:-1}
-.rest{order:0;min-width:0}
+.rest{min-width:0}
 .rest>h2:first-child,.rest>h3:first-child{margin-top:0}
-@media(min-width:960px){
-  .layout.has-toc{display:grid;grid-template-columns:minmax(0,1fr) 18rem;column-gap:var(--s32);align-items:start}
-  .layout.has-toc .rest{grid-column:1;grid-row:1;order:0}
-  .layout.has-toc .toc{grid-column:2;grid-row:1;order:0;position:sticky;top:var(--scroll-pad);max-height:calc(100vh - var(--scroll-pad) - var(--s16));overflow:auto}
-}
-.toc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:var(--s12) var(--s16) var(--s16);margin:0}
-.toc summary{min-height:48px;display:flex;align-items:center;font-weight:700;cursor:pointer}
-.toc ul{list-style:none;margin:0;padding:0 0 var(--s12)}
-.toc a{display:flex;align-items:center;min-height:44px;padding:var(--s12) 0}
-@media(min-width:960px){
-  .toc summary{min-height:44px;padding:var(--s12) 0;font-size:1.25rem;line-height:1.25}
-}
 .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:var(--s16);margin:var(--s16) 0}
 h2+.card,h3+.card{margin-top:var(--s12)}
 .card>:first-child{margin-top:0}
@@ -241,7 +228,7 @@ footer p{margin:0 0 var(--s16)}
   .map-canvas{height:420px}
 }
 @media(forced-colors:active){
-  .card,.inshort,.notice,.jump,.toc,.pn a,.menu summary,.search-toggle,.sitesearch button,.loc-map,.map-use{border:1px solid CanvasText}
+  .card,.inshort,.notice,.jump,.pn a,.menu summary,.search-toggle,.sitesearch button,.loc-map,.map-use{border:1px solid CanvasText}
   .sitesearch button,.map-use{background:ButtonFace;color:ButtonText}
 }
 </style><script defer src="/_vercel/insights/script.js"></script></head><body>
@@ -260,7 +247,7 @@ footer p{margin:0 0 var(--s16)}
 <div class="card note"><strong>BABS does not book a bank branch.</strong>
 <p>DHA's BABS notice answers the difference in its own words: eHomeAffairs "allows the client to make a booking, upload documents and make payment then be processed at the Banks", while BABS "provides a client with an opportunity to book a time slot to get in the office." Both let you book a time slot for an application <span class="src">[<a href="https://www.dha.gov.za/index.php/notices/1557-branch-appointment-booking-system-babs-available-offices" rel="noopener">source</a>]</span>.</p>
 <p>The older address <a href="https://services.dha.gov.za/" rel="noopener">services.dha.gov.za</a> says the Branch Appointment Booking System has moved, and that it is now on MyHomeAffairsOnline. The button on that page goes to <a href="https://myhomeaffairsonline.dha.gov.za/" rel="noopener">myhomeaffairsonline.dha.gov.za</a> <span class="src">[<a href="https://services.dha.gov.za/" rel="noopener">source</a>]</span>.</p></div>
-</div><div class="layout has-toc"><nav class="toc" aria-label="On this page" tabindex="0"><details class="toc-details" open><summary>On this page</summary><ul><li><a href="#which-route-to-use">Which route to use</a></li><li><a href="#book-a-home-affairs-office-visit-babs">Book a Home Affairs office visit (BABS)</a></li><li><a href="#at-a-bank-do-not-start-with-babs">At a bank: do not start with BABS</a></li><li><a href="#ehomeaffairs-steps-for-a-bank-office">eHomeAffairs steps for a bank office</a></li><li><a href="#walk-ins-in-one-place">Walk-ins in one place</a></li></ul></details><script>if(window.matchMedia("(min-width:960px)").matches){var d=document.currentScript.previousElementSibling;if(d&&d.tagName==="DETAILS")d.open=true;}</script></nav><div class="rest"><h2 id="which-route-to-use">Which route to use</h2>
+</div><div class="layout"><div class="rest"><h2 id="which-route-to-use">Which route to use</h2>
 <div class="wrap" tabindex="0"><table><tr><th scope="col">Where you will go</th><th scope="col">What DHA or the bank says to use</th><th scope="col">Walk-in</th></tr>
 <tr><td>A Home Affairs office, for a Smart ID or passport</td><td>BABS, now opened from My Home Affairs Online. The portal offers "Book a DHA Branch Appointment" for visiting Department of Home Affairs branches <span class="src">[<a href="https://myhomeaffairsonline.dha.gov.za/" rel="noopener">source</a>, <a href="https://services.dha.gov.za/" rel="noopener">source</a>]</span>.</td><td>The BABS notice says people without a booking are served as walk-ins, and booked clients are prioritised <span class="src">[<a href="https://www.dha.gov.za/index.php/notices/1557-branch-appointment-booking-system-babs-available-offices" rel="noopener">source</a>]</span>. See the walk-in section below for the other official wordings, and the dates they apply to.</td></tr>
 <tr><td>A Digital Partnership bank branch, for a green ID book conversion or a Smart ID re-issue</td><td>The bank's own channel. DHA says you do not log on to eHomeAffairs to make bookings or payments <span class="src">[<a href="https://www.dha.gov.za/index.php/id-smart-card/banks-digital" rel="noopener">source</a>, <a href="https://myhomeaffairsonline.dha.gov.za/partner-branch" rel="noopener">source</a>]</span>.</td><td>DHA says Capitec and Standard Bank allow walk-ins without an appointment <span class="src">[<a href="https://www.dha.gov.za/index.php/id-smart-card/banks-digital" rel="noopener">source</a>]</span>. FNB and Absa state their own rules below. BABS is not named on the Digital Partnership page <span class="src">[<a href="https://www.dha.gov.za/index.php/id-smart-card/banks-digital" rel="noopener">source</a>]</span>.</td></tr>
