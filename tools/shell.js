@@ -102,42 +102,35 @@
   var slot=document.getElementById("head-slot");
   var toggle=document.querySelector(".search-toggle");
   var search=document.getElementById("site-search");
-  var menu=document.querySelector("details.menu");
-  if(!header||!slot) return;
-  var docked=false;
-  var fullH=0;
-  function compactPx(){
-    var raw=getComputedStyle(document.documentElement).getPropertyValue("--header-compact")||"108px";
-    var n=parseFloat(raw);
-    if(String(raw).indexOf("rem")>=0){
-      n=n*parseFloat(getComputedStyle(document.documentElement).fontSize||"16");
-    }
-    return n||108;
-  }
-  function setSearchOpen(open){
-    if(!search||!toggle) return;
-    if(open && !document.body.classList.contains("is-docked")) open=false;
-    search.classList.toggle("is-open", open);
-    toggle.setAttribute("aria-expanded", open?"true":"false");
-    if(open){ if(menu) menu.removeAttribute("open"); closeGroups(); }
-    if(open){
-      var input=document.getElementById("q");
-      if(input) input.focus();
-    }
-  }
-  function measure(){
-    if(docked) return;
-    if(menu && menu.hasAttribute("open")) return;
-    fullH=header.offsetHeight;
-  }
   var nav=document.getElementById("site-nav");
+  if(!header||!slot) return;
   function closeGroups(){
     var open=document.querySelectorAll(".grp[open]");
     for(var i=0;i<open.length;i++) open[i].removeAttribute("open");
   }
+  function wide(){
+    return window.matchMedia("(min-width:960px)").matches;
+  }
+  function setSpace(){
+    var h=header.offsetHeight;
+    document.documentElement.style.setProperty("--header-space", h+"px");
+    document.documentElement.style.setProperty("--scroll-pad", (h+16)+"px");
+    slot.style.height=h+"px";
+  }
+  function setSearchOpen(open){
+    if(!search||!toggle) return;
+    if(wide()) open=false;
+    search.classList.toggle("is-open", !!open);
+    toggle.setAttribute("aria-expanded", open?"true":"false");
+    if(open){
+      closeGroups();
+      var input=document.getElementById("q");
+      if(input) input.focus();
+    }
+  }
   function updateHint(){
     if(!nav) return;
-    var more=docked && nav.scrollWidth>nav.clientWidth+8;
+    var more=nav.scrollWidth>nav.clientWidth+8;
     var atEnd=nav.scrollLeft+nav.clientWidth>=nav.scrollWidth-8;
     var atStart=nav.scrollLeft<=8;
     document.body.classList.toggle("nav-more-right", !!(more && !atEnd));
@@ -151,34 +144,8 @@
     nav.scrollLeft=left<0?0:left;
     updateHint();
   }
-  function dock(){
-    if(docked) return;
-    if(menu) menu.removeAttribute("open");
-    closeGroups();
-    setSearchOpen(false);
-    measure();
-    if(!fullH) fullH=header.offsetHeight;
-    slot.style.height=fullH+"px";
-    document.body.classList.add("is-docked");
-    docked=true;
-    revealCurrent();
-  }
-  function undock(){
-    if(!docked) return;
-    setSearchOpen(false);
-    closeGroups();
-    if(menu) menu.removeAttribute("open");
-    document.body.classList.remove("is-docked");
-    document.body.classList.remove("nav-more-right");
-    document.body.classList.remove("nav-more-left");
-    slot.style.height="";
-    docked=false;
-    measure();
-  }
   function coverEdge(){
-    if(docked) return compactPx()+16;
-    var bottom=header.getBoundingClientRect().bottom;
-    return (bottom>0?bottom:compactPx())+16;
+    return header.getBoundingClientRect().height+16;
   }
   function revealTarget(el){
     if(!el||!el.getBoundingClientRect) return;
@@ -195,34 +162,16 @@
     var el=document.getElementById(id);
     if(el) revealTarget(el);
   }
-  function onScroll(){
-    var y=window.scrollY||document.documentElement.scrollTop||0;
-    var line=fullH-compactPx();
-    if(!fullH) measure();
-    var was=docked;
-    if(!docked){
-      measure();
-      if(fullH>compactPx() && y>fullH-compactPx()) dock();
-    } else if(y<line-24){
-      undock();
-    }
-    if(was!==docked) revealHash();
-  }
   if(toggle){
     toggle.addEventListener("click", function(){
       var open=toggle.getAttribute("aria-expanded")==="true";
       setSearchOpen(!open);
     });
   }
-  if(menu){
-    var sum=menu.querySelector("summary");
-    if(sum) sum.addEventListener("click", function(){ setSearchOpen(false); });
-  }
   document.addEventListener("keydown", function(e){
     if(e.key!=="Escape") return;
     setSearchOpen(false);
     closeGroups();
-    if(menu && menu.hasAttribute("open")) menu.removeAttribute("open");
     var box=document.getElementById("search-results");
     if(box){ box.hidden=true; box.innerHTML=""; }
   });
@@ -233,10 +182,9 @@
       var href=link.getAttribute("href")||"";
       if(href.indexOf("#")>=0) setTimeout(revealHash, 0);
     }
-    if(!docked||header.contains(t)) return;
+    if(header.contains(t)) return;
     setSearchOpen(false);
     closeGroups();
-    if(menu) menu.removeAttribute("open");
   });
   if(nav){
     nav.addEventListener("scroll", updateHint, {passive:true});
@@ -247,7 +195,7 @@
   }
   document.addEventListener("focusin", function(e){
     var t=e.target;
-    if(!t||!docked) return;
+    if(!t) return;
     if(nav && nav.contains(t) && nav.scrollWidth>nav.clientWidth+8 && t.closest){
       var grp=t.closest(".grp");
       if(grp){
@@ -262,14 +210,97 @@
     if(header.contains(t)||(t.classList&&t.classList.contains("skip"))) return;
     revealTarget(t);
   });
-  window.addEventListener("scroll", onScroll, {passive:true});
   window.addEventListener("hashchange", function(){ setTimeout(revealHash, 0); });
   window.addEventListener("resize", function(){
-    if(docked) undock();
-    measure();
-    onScroll();
+    setSearchOpen(false);
+    setSpace();
+    updateHint();
   });
-  measure();
-  onScroll();
+  setSpace();
+  revealCurrent();
   revealHash();
+})();
+(function(){
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];
+    });
+  }
+  var cards=document.querySelectorAll(".branch-card");
+  var bank=document.getElementById("bank-filter");
+  var text=document.getElementById("branch-filter");
+  var count=document.getElementById("branch-count");
+  function applyFilter(){
+    if(!cards.length || (!bank && !text)) return;
+    var b=bank?bank.value:"";
+    var q=(text&&text.value?text.value:"").trim().toLowerCase();
+    var shown=0;
+    for(var i=0;i<cards.length;i++){
+      var el=cards[i];
+      var blob=(el.getAttribute("data-text")||el.textContent||"").toLowerCase();
+      var ok=true;
+      if(b && el.getAttribute("data-bank")!==b) ok=false;
+      if(ok && q && blob.indexOf(q)<0) ok=false;
+      el.hidden=!ok;
+      if(ok) shown++;
+    }
+    var groups=document.querySelectorAll(".branch-group");
+    for(var g=0;g<groups.length;g++){
+      var vis=groups[g].querySelectorAll(".branch-card:not([hidden])");
+      groups[g].hidden=vis.length===0;
+    }
+    if(count){
+      if(!b && !q) count.textContent="Showing all "+cards.length+" branches.";
+      else count.textContent="Showing "+shown+" of "+cards.length+" branches.";
+    }
+  }
+  if(bank) bank.addEventListener("change", applyFilter);
+  if(text) text.addEventListener("input", applyFilter);
+  applyFilter();
+  var locBtn=document.getElementById("use-location");
+  var locStatus=document.getElementById("location-status");
+  var locList=document.getElementById("nearest-list");
+  var locData=document.getElementById("nearest-data");
+  if(!locBtn||!locStatus||!locList||!locData) return;
+  var places=[];
+  try { places=JSON.parse(locData.textContent)||[]; } catch(e){ places=[]; }
+  function dist(lat1,lon1,lat2,lon2){
+    var R=6371, p=Math.PI/180;
+    var dLat=(lat2-lat1)*p, dLon=(lon2-lon1)*p;
+    var x=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*p)*Math.cos(lat2*p)*Math.sin(dLon/2)*Math.sin(dLon/2);
+    return 2*R*Math.asin(Math.min(1,Math.sqrt(x)));
+  }
+  locBtn.addEventListener("click", function(){
+    locStatus.textContent="Asking this browser for a location. The coordinates stay on this page.";
+    if(!navigator.geolocation){
+      locStatus.textContent="This browser cannot share a location. Pick a bank, a province, or a city.";
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(function(pos){
+      var lat=pos.coords.latitude, lon=pos.coords.longitude;
+      var ranked=[];
+      for(var i=0;i<places.length;i++){
+        var place=places[i];
+        if(typeof place.lat!=="number"||typeof place.lon!=="number") continue;
+        ranked.push({p:place, km:dist(lat, lon, place.lat, place.lon)});
+      }
+      ranked.sort(function(a,b){ return a.km-b.km; });
+      ranked=ranked.slice(0,5);
+      if(!ranked.length){
+        locStatus.textContent="No placed branches to compare. Pick a city or a province.";
+        locList.innerHTML="";
+        return;
+      }
+      locStatus.textContent="Five nearest branches this guide could place on a map. Distance is a straight line. A city page lists every branch, including ones without a pin.";
+      var html="";
+      for(var n=0;n<ranked.length;n++){
+        var item=ranked[n].p;
+        var km=ranked[n].km<10?ranked[n].km.toFixed(1):String(Math.round(ranked[n].km));
+        html+='<li class="branch-card"><p class="bc-kicker">'+esc(item.bank)+'</p><p class="bc-name">'+esc(item.name)+'</p><p class="bc-where">'+esc(item.city)+', about '+esc(km)+' km</p><p class="bc-go"><a href="'+esc(item.directions)+'" target="_blank" rel="noopener">Get directions<span class="vh"> (opens in a new tab)</span></a></p></li>';
+      }
+      locList.innerHTML=html;
+    }, function(){
+      locStatus.textContent="Location was not shared. Pick a bank, a province, or a city.";
+    }, {enableHighAccuracy:false, timeout:12000, maximumAge:300000});
+  });
 })();

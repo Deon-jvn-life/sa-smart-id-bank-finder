@@ -1,5 +1,6 @@
 import json,re,os,html as H,urllib.parse
 D="26 October 2026"
+D_NEW="23 November 2026"
 BASE="https://sa-smart-id-bank-finder.vercel.app"
 SITE_NAME="Smart ID at the Bank (SA)"
 # Optional search-console tokens. Leave a value empty to omit that meta tag.
@@ -77,6 +78,9 @@ S=dict(
  nwb="https://www.dha.gov.za/index.php/contact-us/bank-branches/104-north-west-banks",
  ncb="https://www.dha.gov.za/index.php/contact-us/bank-branches/99-northern-cape-banks",
  wcb="https://www.dha.gov.za/index.php/contact-us/bank-branches/96-western-cape-banks",
+ absahelp="https://www.absa.co.za/self-service/",
+ trackold="https://www.dha.gov.za/index.php/minister-ofhome-affairs/28-track-trace/78-track-traceyour-status",
+ fnblive="https://www.online.fnb.co.za/ways-to-bank/branch.html",
 )
 def src(*k): return ' <span class="src">[' + ', '.join(f'<a href="{S[x]}" rel="noopener">source</a>' for x in k) + ']</span>'
 PROV=["Eastern Cape","Free State","Gauteng","KwaZulu-Natal","Limpopo","Mpumalanga","North West","Northern Cape","Western Cape"]
@@ -160,21 +164,49 @@ def clean_href(url, page='index.html'):
     if '.' in parts[-1]: return '/'+'/'.join(parts)+frag
     return '/'+'/'.join(parts)+'/'+frag
 def clean_links(html, page='index.html'):
-    return re.sub(r'href="([^"]*)"',lambda m:'href="%s"'%clean_href(m.group(1), page),html)
+    parts=re.split(r'(<script\b[^>]*>.*?</script>)', html, flags=re.S|re.I)
+    out=[]
+    for i,part in enumerate(parts):
+        if i%2==1:
+            out.append(part)
+        else:
+            out.append(re.sub(r'href="([^"]*)"',lambda m:'href="%s"'%clean_href(m.group(1), page),part))
+    return ''.join(out)
+BANK_TITLE={
+"Capitec":"Capitec Smart ID branches: booking, walk-ins, fees",
+"Standard Bank":"Standard Bank Smart ID branches, booking and walk-ins",
+"FNB":"FNB Smart ID branches, booking, walk-ins and the fee",
+"Absa":"Absa Smart ID branches: booking, walk-ins and fees",
+"Nedbank":"Nedbank Smart ID branches, booking and walk-in rules",
+}
+BANK_H1={
+"Capitec":"Capitec Smart ID branches, booking and walk-ins",
+"Standard Bank":"Standard Bank Smart ID branches, booking and walk-ins",
+"FNB":"FNB Smart ID branches and booking",
+"Absa":"Absa Smart ID branches, booking and walk-ins",
+"Nedbank":"Nedbank Smart ID branches and booking",
+}
+PROVINCE_TITLE={
+"Eastern Cape":"Smart ID bank branches in the Eastern Cape (Gqeberha)",
+"Free State":"Smart ID bank branches in the Free State (Bloemfontein)",
+"Gauteng":"Smart ID banks in Gauteng: Johannesburg and Pretoria",
+"KwaZulu-Natal":"Smart ID bank branches in KwaZulu-Natal (Durban, SA)",
+"Limpopo":"Smart ID bank branches in Limpopo, around Polokwane",
+"Mpumalanga":"Smart ID bank branches in Mpumalanga, around Nelspruit",
+"North West":"Smart ID bank branches in the North West (Rustenburg)",
+"Northern Cape":"Smart ID banks in the Northern Cape, with Kimberley",
+"Western Cape":"Smart ID bank branches in Western Cape (Cape Town)",
+}
+PROVINCE_CITY={"Eastern Cape":"Gqeberha","Free State":"Bloemfontein","Gauteng":"Johannesburg and Pretoria","KwaZulu-Natal":"Durban","Limpopo":"Polokwane","Mpumalanga":"Nelspruit","North West":"Rustenburg","Northern Cape":"Kimberley","Western Cape":"Cape Town"}
 def bank_title(name):
-    titled=f"{name} Smart ID and passport branches: walk-in, fees, rules"
-    if 50<=len(titled)<=60: return titled
-    return f"{name} Smart ID branches: walk-in, fees, rules"
+    return BANK_TITLE[name]
 def bank_desc(name):
-    return f"{name} Smart ID and passport branch service: walk-in or booking, client requirement, fees and branch list. Sourced from DHA."
+    return f"{name} Smart ID branches, booking and walk-ins: client rule, fee and the branch list from the Department of Home Affairs locator."
 def province_title(name):
-    # Same pattern as "Smart ID at banks in Gauteng: Capitec, FNB, Absa branches".
-    # Longer province names drop "at" so the title stays within 50 to 60 characters.
-    exact=f"Smart ID at banks in {name}: Capitec, FNB, Absa branches"
-    if 50<=len(exact)<=60: return exact
-    return f"Smart ID banks in {name}: Capitec, FNB, Absa branches"
+    return PROVINCE_TITLE[name]
 def province_desc(name):
-    return f"Bank branches in {name} for a Smart ID, from the DHA Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go."
+    city=PROVINCE_CITY[name]
+    return f"Smart ID branches in {name}, including {city}. From the DHA locator and older eHomeAffairs lists. Filter by bank, then confirm."
 def heading_plain(inner):
     s=re.sub(r'\s*<span class="src">.*?</span>','',inner,flags=re.S)
     s=re.sub(r'<[^>]+>','',s)
@@ -195,20 +227,31 @@ def search_rows():
         for p, t in items:
             rows.append({"u":clean_href(p),"t":t,"s":SUMMARIES.get(p,""),"g":g,"k":ALIASES.get(p,"")})
     return json.dumps(rows,ensure_ascii=False).replace("<","\\u003c").replace(">","\\u003e").replace("&","\\u0026")
-def jump(path, label=None):
+ICONS={
+"id":'<rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="12" r="2" fill="currentColor"/><path d="M13 10h6M13 14h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+"book":'<path d="M6 4h9a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 4a3 3 0 0 0-3 3v13" fill="none" stroke="currentColor" stroke-width="2"/>',
+"pin":'<path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="10" r="2.2" fill="currentColor"/>',
+"passport":'<rect x="5" y="3" width="14" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="11" r="2.3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 16.5h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+"bank":'<path d="M4 10h16M6 10v7M10 10v7M14 10v7M18 10v7M3 17h18M12 3l9 5H3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+}
+def icon_svg(name):
+    body=ICONS.get(name)
+    if not body: return ''
+    return f'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">{body}</svg>'
+def jump(path, label=None, icon=None):
     title=label or TITLE_OF[path]
     blurb=SUMMARIES.get(path,"")
     blurb_html=f'<span class="ls">{H.escape(blurb)}</span>' if blurb else ''
-    return f'<a class="jump" href="{path}"><span class="lt">{H.escape(title)}</span>{blurb_html}</a>'
+    return f'<a class="jump" href="{path}">{icon_svg(icon)}<span class="lt">{H.escape(title)}</span>{blurb_html}</a>'
 def start_here_html():
     items=''.join(f'<li>{jump(p)}</li>' for p in GUIDE_SEQ)
     return ('<section aria-labelledby="start-here"><h2 id="start-here">Start here</h2>'
             '<p>Open these pages in this order: what it costs, how to book, the document you need, then collecting it.</p>'
             f'<ol class="tasks">{items}</ol></section>')
 def top_tasks_html():
-    items=''.join(f'<li>{jump(p, label)}</li>' for p, label in TASKS)
-    return ('<section aria-labelledby="top-tasks"><h2 id="top-tasks">Top tasks</h2>'
-            '<p>Common jobs on this guide. Each card opens one page.</p>'
+    items=''.join(f'<li>{jump(p, label, icon)}</li>' for p, label, icon in TASKS)
+    return ('<section aria-labelledby="top-tasks"><h2 id="top-tasks">What do you need?</h2>'
+            '<p>Each card opens one page.</p>'
             f'<ul class="tasks">{items}</ul></section>')
 def all_topics_html():
     blocks=[]
@@ -241,8 +284,16 @@ def read_next_html(path):
         items.append(f'<li><a class="jump" href="{dest}"><span class="lt">{H.escape(label)}</span>{blurb_html}</a></li>')
     if not items:
         raise SystemExit('Missing Read next on '+path)
-    return '<aside class="readnext" aria-labelledby="read-next"><h2 id="read-next">Read next</h2><ul>'+''.join(items)+'</ul></aside>'
-def page(path,title,body,desc,checked=None,faq=None,article=True,sitemap=True,robots=None):
+    return '<aside class="readnext" aria-labelledby="read-next"><h2 id="read-next">Next step</h2><ul>'+''.join(items)+'</ul></aside>'
+def joined_links(pairs):
+    bits=[f'<a href="{url}">{H.escape(label)}</a>' for url,label in pairs]
+    if len(bits)==1: return bits[0]
+    if len(bits)==2: return bits[0]+' and '+bits[1]
+    return ', '.join(bits[:-1])+' and '+bits[-1]
+def checked_line(pairs, when):
+    pairs=pairs or [(S['digital'], 'the Department of Home Affairs')]
+    return f'<p class="checked-line">Checked against {joined_links(pairs)} on {when}. Sources are linked next to each fact.</p>'
+def page(path,title,body,desc,checked=None,faq=None,article=True,sitemap=True,robots=None,checked_against=None,item_names=None):
     when=checked or D
     check_meta(path,title,desc)
     if sitemap: PATHS.append((path,iso_date(when)))
@@ -253,8 +304,11 @@ def page(path,title,body,desc,checked=None,faq=None,article=True,sitemap=True,ro
         body=body.replace('<h1>','<h1 id="page-title">',1)
     summary=SUMMARIES.get(path,'')
     long_page=path not in ('index.html','find/index.html','404.html','provinces/index.html') and len(plain_text(body))>=700
-    if summary and long_page and '</h1>' in body:
-        body=body.replace('</h1>','</h1><div class="inshort"><p><strong>In short.</strong> '+H.escape(summary)+'</p></div>',1)
+    tail=checked_line(checked_against, when)
+    if summary and long_page:
+        tail+='<div class="inshort"><p><strong>In short.</strong> '+H.escape(summary)+'</p></div>'
+    if '</h1>' in body:
+        body=body.replace('</h1>','</h1>'+tail,1)
     seen=set(re.findall(r'\bid="([^"]+)"', body))
     seen.add('read-next')
     def addid(m):
@@ -297,6 +351,8 @@ def page(path,title,body,desc,checked=None,faq=None,article=True,sitemap=True,ro
     graph.append({"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":i,"name":name,"item":url} for i,(name,url) in enumerate(crumbs,1)]})
     if faq:
         graph.append({"@type":"FAQPage","mainEntity":[{"@type":"Question","name":q,"acceptedAnswer":{"@type":"Answer","text":plain_text(a)}} for q,a in faq]})
+    if item_names:
+        graph.append({"@type":"ItemList","name":title,"numberOfItems":len(item_names),"itemListElement":[{"@type":"ListItem","position":i,"name":name} for i,name in enumerate(item_names,1)]})
     head_bits=['<!doctype html><html lang="en-ZA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#06382A">',
         f'<title>{H.escape(title)}</title>',
         f'<meta name="description" content="{H.escape(desc)}">',
@@ -324,8 +380,7 @@ def page(path,title,body,desc,checked=None,faq=None,article=True,sitemap=True,ro
         '<link rel="apple-touch-icon" href="/apple-touch-icon.png">',
         f'<script type="application/ld+json">{json_ld({"@context":"https://schema.org","@graph":graph})}</script>',
         f'<style>{CSS}</style><script defer src="/_vercel/insights/script.js"></script></head><body>']
-    notice=f'<div class="notice" role="note"><div class="shell"><p class="disclaimer">{H.escape(DISCLAIMER_SHORT)} <a href="/disclaimer/">Disclaimer</a>.</p></div></div>'
-    meta=f'<p class="meta"><span class="checked">Last checked: {when}</span></p>'
+    note=f'<p class="site-note">Independent guide. Not a government website. <a href="/disclaimer/">Disclaimer</a>.</p>'
     pn=series_nav(path)
     readnext=read_next_html(path)
     foot=(f'<footer><div class="shell"><nav class="footnav" aria-label="About this guide"><a href="/find/">All pages</a><a href="/disclaimer/">Disclaimer</a></nav>'
@@ -336,16 +391,18 @@ def page(path,title,body,desc,checked=None,faq=None,article=True,sitemap=True,ro
     map_script='<script defer src="/map.js"></script>' if 'id="branch-map"' in body else ''
     h=''.join(head_bits)+f'''
 <a class="skip" href="#content">Skip to content</a>
-<div id="head-slot"><header id="site-header"><div class="shell">
-<a class="brand" href="/">{MARK}<span class="name"><span class="name-main">Smart ID at the Bank</span><span class="name-compact">Smart ID guide</span><span class="name-sub">Independent guide. Not a government website.</span></span></a>
-<button type="button" class="search-toggle" aria-expanded="false" aria-controls="site-search"><svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="search-toggle-text">Search</span></button>
-<a class="headlink" href="/find/">All pages</a>
-<div class="search-wrap" id="site-search"><form class="sitesearch" role="search" action="/find/" method="get"><label for="q">Search this guide</label><input id="q" name="q" type="search" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="submit">Search</button></form><div id="search-results" class="search-results" hidden tabindex="0" role="region" aria-live="polite" aria-label="Matching pages"></div></div>
-<details class="menu"><summary>Topics</summary></details>
+<div id="head-slot"><header id="site-header">
+<div class="shell bar">
+<a class="brand" href="/">{MARK}<span class="name"><span class="name-main">Smart ID at the Bank</span><span class="name-compact">Smart ID guide</span></span></a>
+<div class="search-wrap" id="site-search"><form class="sitesearch" role="search" action="/find/" method="get"><label for="q">Search this guide</label><input id="q" name="q" type="search" placeholder="Search this guide" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="submit">Search</button></form><div id="search-results" class="search-results" hidden tabindex="0" role="region" aria-live="polite" aria-label="Matching pages"></div></div>
+<button type="button" class="search-toggle" aria-expanded="false" aria-controls="site-search"><svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="vh">Search</span></button>
+</div>
+<div class="shell nav-shell">
 <nav id="site-nav" class="top" aria-label="Topics" tabindex="0">{nav}</nav>
 <span class="nav-fade nav-fade-left" aria-hidden="true"></span><span class="nav-fade nav-fade-right" aria-hidden="true"></span><span class="nav-hint" aria-hidden="true"></span>
-</div></header></div>
-<main id="content" tabindex="-1">{notice}<div class="shell">{crumbs_html}{meta}<article class="content" aria-labelledby="page-title"><div class="head-block">{lead}</div><div class="layout"><div class="rest">{rest}{pn}{readnext}</div></div></article></div></main>
+</div>
+</header></div>
+<main id="content" tabindex="-1"><div class="shell">{note}{crumbs_html}<article class="content" aria-labelledby="page-title"><div class="head-block">{lead}</div><div class="layout"><div class="rest">{rest}{pn}{readnext}</div></div></article></div></main>
 {foot}
 {search_tag}{map_script}</body></html>'''
     h=clean_links(h, path)
@@ -396,40 +453,76 @@ def dp_address(b):
 def map_html(points,label):
     if not points: return ""
     payload={"label":label,"points":points}
-    return ('<p class="map-lead">The tables on this page list every branch. This map is an extra view and only shows a pin where the official address could be placed. Map data is from <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a>. The page still scrolls as usual. Use the zoom buttons, or choose the map if you want the scroll wheel to zoom.</p>'
+    return ('<p class="map-lead">The cards on this page list every branch. This map is an extra view and only shows a pin where the official address could be placed. Map data is from <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a>. The page still scrolls as usual. Use the zoom buttons, or choose the map if you want the scroll wheel to zoom.</p>'
         f'<div id="branch-map" class="loc-map" role="region" aria-label="{H.escape(label)}">'
-        '<p class="map-status">A map of the placed branches loads here if JavaScript is available. The table is the full list.</p>'
+        '<p class="map-status">A map of the placed branches loads here if JavaScript is available. The cards are the full list.</p>'
         '<div class="map-canvas" hidden></div></div>'
         f'<script type="application/json" id="branch-map-data">{json_ld(payload)}</script>')
 def point_from(name,address,lat,lon):
     return {"name":name,"address":address,"lat":lat,"lon":lon,"directions":dir_url(address)}
+def bank_of_name(name):
+    u=name.upper()
+    for label,canon in (("STANDARD BANK","Standard Bank"),("CAPITEC","Capitec"),("NEDBANK","Nedbank"),("ABSA","Absa"),("FNB","FNB")):
+        if u.startswith(label): return canon
+    return name.split()[0]
+def branch_tools(banks):
+    bank_field=''
+    if len(set(banks))>1:
+        opts=''.join(f'<option value="{H.escape(b)}">{H.escape(b)}</option>' for b in banks)
+        bank_field=f'<div><label for="bank-filter">Bank</label><select id="bank-filter"><option value="">All banks</option>{opts}</select></div>'
+    return ('<div class="branch-tools">'+bank_field
+            +'<div><label for="branch-filter">Town, mall or branch name</label>'
+            +'<input id="branch-filter" type="search" autocomplete="off"></div></div>'
+            +'<p id="branch-count" class="branch-count" aria-live="polite"></p>')
+def branch_card(bank,name,where,service,address,text):
+    return (f'<li class="branch-card" data-bank="{H.escape(bank)}" data-text="{H.escape(text)}">'
+            f'<p class="bc-kicker">{H.escape(bank)}</p>'
+            f'<p class="bc-name">{H.escape(name)}</p>'
+            f'<p class="bc-where">{H.escape(where)}</p>'
+            f'<p class="bc-svc">{H.escape(service)}</p>'
+            f'<p class="bc-go">{dir_link(address,name)}</p></li>')
 def dptable(rows,showprov=False,showbank=False):
-    t='<div class="wrap"><table><tr>'+('<th>Bank</th>' if showbank else '')+'<th>Branch</th><th>Address line</th><th>City</th>'+('<th>Province</th>' if showprov else '')+'<th>Postal code</th><th>Directions</th></tr>'
+    items=[]
     points=[]
     for b in sorted(rows,key=lambda x:(x.get('_bank',''),x['city'],x['branchName'])):
         addr=dp_address(b)
-        t+='<tr>'+(f"<td>{b['_bank']}</td>" if showbank else '')+f"<td>{H.escape(b['branchName'])}</td><td>{H.escape(b['suburb'])}</td><td>{H.escape(b['city'])}</td>"+(f"<td>{b['province']}</td>" if showprov else '')+f"<td>{b['postal_code']}</td><td>{dir_link(addr,b['branchName'])}</td></tr>"
+        suburb=(b.get('suburb') or '').strip()
+        bits=[suburb,b['city']]
+        if showprov: bits.append(b['province'])
+        where=', '.join(p for p in bits if p)
+        text=' '.join([b.get('_bank',''),b['branchName'],suburb,b['city'],b.get('province',''),str(b.get('postal_code') or '')])
+        items.append(branch_card(b['_bank'],b['branchName'],where,'Smart ID re-issue',addr,text))
         hit=pin_for(BANK_KEY[b['_bank']],b['branchName'],b['suburb'],b['city'],b['postal_code'])
         if hit: points.append(point_from(b['branchName'],addr,hit[0],hit[1]))
-    return t+'</table></div>',points
+    return '<ul class="branch-cards">'+''.join(items)+'</ul>',points
 def legacy_address(l):
     return ", ".join(p for p in [l['name'],l['city'],l['prov'],"South Africa"] if p)
 def legacy_table(rows,showprov):
-    t='<div class="wrap"><table><tr><th>Branch</th><th>City</th>'+('<th>Province</th>' if showprov else '')+'<th>Phone (as listed)</th><th>Directions</th></tr>'
+    items=[]
     for l in rows:
-        t+=f'<tr><td>{H.escape(l["name"])}</td><td>{H.escape(l["city"])}</td>'+(f'<td>{H.escape(l["prov"])}</td>' if showprov else '')+f'<td>{H.escape(l["phone"])}</td><td>{dir_link(legacy_address(l),l["name"])}</td></tr>'
-    return t+'</table></div>'
-def ned_section():
+        bits=[l['city']]
+        if showprov: bits.append(l['prov'])
+        where=', '.join(bits)
+        phone=(l.get('phone') or '').strip()
+        service='Older eHomeAffairs list.'+(f' Phone as listed: {phone}.' if phone else '')
+        text=' '.join([l['name'],l['city'],l['prov'],phone])
+        items.append(branch_card(bank_of_name(l['name']),l['name'],where,service,legacy_address(l),text))
+    return '<ul class="branch-cards">'+''.join(items)+'</ul>'
+def ned_cards(only_city=None):
+    items=[]
     points=[]
-    t='<div class="wrap"><table><tr><th>Branch</th><th>City</th><th>Address</th><th>Directions</th></tr>'
     for name,city,line,prov in NED_BRANCHES:
+        if only_city and city.strip().lower()!=only_city.strip().lower(): continue
         addr=", ".join(p for p in [name,line,city,prov,"South Africa"] if p)
-        t+=f'<tr><td>{H.escape(name)}</td><td>{H.escape(city)}</td><td>{H.escape(line)}</td><td>{dir_link(addr,name)}</td></tr>'
+        where=', '.join(p for p in [line,city,prov] if p)
+        text=' '.join([name,line,city,prov])
+        items.append(branch_card("Nedbank",name,where,'Listed on Nedbank\'s own page, not in the DHA locator.',addr,text))
         hit=pin_for("nedbank",name,line,city,"")
         if hit: points.append(point_from(name,addr,hit[0],hit[1]))
-    t+='</table></div>'
-    return f'<h2>Nedbank branches (per Nedbank)</h2><p>Addresses as published by Nedbank. Confirm the branch before you go.</p>{map_html(points,"Map of Nedbank branches with a placed address")}{t}'
-FILTER='''<div class="branch-filter"><label for="branch-filter">Filter by town, mall or branch name</label><input id="branch-filter" type="search" placeholder="Town, mall or branch name" autocomplete="off" oninput="var v=this.value.toLowerCase();document.querySelectorAll('table tr').forEach(function(r,i){if(r.querySelector('td'))r.style.display=r.textContent.toLowerCase().indexOf(v)>-1?'':'none'})"></div>'''
+    return '<ul class="branch-cards">'+''.join(items)+'</ul>',points
+def ned_section():
+    cards,points=ned_cards()
+    return f'<h2>Nedbank branches (per Nedbank)</h2><p>Addresses as published by Nedbank. Confirm the branch before you go.</p>{map_html(points,"Map of Nedbank branches with a placed address")}{branch_tools(["Nedbank"])}<div class="branch-group">{cards}</div>'
 for pid,n,s in BANKS:
     if s in dp:
         for b in dp[s]: b['_bank']=n; b['province']=normprov(b['province'])
@@ -440,15 +533,18 @@ TOPICS=[
  ("Before you go",[
     ("fees-and-documents/index.html","Fees and documents"),
     ("booking-and-walk-ins/index.html","Booking and walk-ins"),
+    ("no-home-affairs-appointments/index.html","No appointments"),
+    ("smart-id-status/index.html","Smart ID status"),
  ]),
  ("Which document",[
-    ("green-id-book-to-smart-id/index.html","Green ID book to Smart ID"),
+    ("green-id-book-to-smart-id/index.html","Green ID book deadline"),
     ("lost-or-stolen-smart-id/index.html","Lost or stolen Smart ID"),
     ("name-or-surname-change/index.html","Name or surname change"),
     ("date-of-birth-or-gender/index.html","Date of birth or gender"),
     ("first-smart-id-at-16/index.html","First Smart ID at 16"),
     ("applying-for-a-passport/index.html","Applying for a passport"),
-    ("collecting-smart-id-or-passport/index.html","Collecting a Smart ID or passport"),
+    ("collecting-smart-id-or-passport/index.html","Collection booking"),
+    ("temporary-id-certificate/index.html","Temporary ID certificate"),
  ]),
  ("Banks",[
     ("banks/capitec/index.html","Capitec"),
@@ -456,6 +552,12 @@ TOPICS=[
     ("banks/fnb/index.html","FNB (First National Bank)"),
     ("banks/absa/index.html","Absa"),
     ("banks/nedbank/index.html","Nedbank"),
+ ]),
+ ("Cities",[
+    ("cities/johannesburg/index.html","Johannesburg"),
+    ("cities/pretoria/index.html","Pretoria"),
+    ("cities/cape-town/index.html","Cape Town"),
+    ("cities/durban/index.html","Durban"),
  ]),
  ("Provinces",[("provinces/index.html","All provinces")]+[(f"provinces/{slug(p)}/index.html", p) for p in PROV]),
  ("Using this guide",[
@@ -472,14 +574,14 @@ for _g,_items in TOPICS:
 GUIDE_SEQ=[p for p,_t in TOPICS[0][1]]+[p for p,_t in TOPICS[1][1]]
 BANK_SEQ=[p for p,_t in TOPICS[2][1]]
 PROV_SEQ=[f"provinces/{slug(p)}/index.html" for p in PROV]
-SEQS=[GUIDE_SEQ,BANK_SEQ,PROV_SEQ]
+CITY_SEQ=["cities/johannesburg/index.html","cities/pretoria/index.html","cities/cape-town/index.html","cities/durban/index.html"]
+SEQS=[GUIDE_SEQ,BANK_SEQ,PROV_SEQ,CITY_SEQ]
 TASKS=[
- ("provinces/index.html","Find a branch by province"),
- ("fees-and-documents/index.html","Fees and documents"),
- ("booking-and-walk-ins/index.html","Booking and walk-ins"),
- ("green-id-book-to-smart-id/index.html","Green ID book to Smart ID"),
- ("lost-or-stolen-smart-id/index.html","Lost or stolen Smart ID"),
- ("collecting-smart-id-or-passport/index.html","Collecting a Smart ID or passport"),
+ ("lost-or-stolen-smart-id/index.html","Replace a lost or stolen ID","id"),
+ ("green-id-book-to-smart-id/index.html","Green ID book deadline","book"),
+ ("first-smart-id-at-16/index.html","First Smart ID at 16","id"),
+ ("applying-for-a-passport/index.html","Apply for a passport","passport"),
+ ("collecting-smart-id-or-passport/index.html","Collect your Smart ID","pin"),
 ]
 SUMMARIES={
  "index.html":"Start here, top tasks, and every topic on this guide.",
@@ -490,15 +592,22 @@ SUMMARIES={
  "date-of-birth-or-gender/index.html":"A wrong date of birth or a wrong recorded sex is corrected at Home Affairs, before a new Smart ID. Official pages do not all use the same form, the same documents or the same fee.",
  "first-smart-id-at-16/index.html":"First South African Smart ID at 16: Department of Home Affairs document lists, who must attend, the free first issue, and which banks do not take a first-time applicant.",
  "collecting-smart-id-or-passport/index.html":"When a South African Smart ID or passport is ready: how the Department of Home Affairs and each bank notify you, where you collect, what to bring, who may collect, and any deadline a source states.",
- "green-id-book-to-smart-id/index.html":"Switching a South African green ID book to a Smart ID: whether it is still valid, the dates announced for 2027 and 2028, the fee, and which banks take it.",
+ "green-id-book-to-smart-id/index.html":"The green ID book deadline in the October 2026 announcements is 31 March 2027 for production and 31 March 2028 for recognition. Those dates are not on every official page.",
  "applying-for-a-passport/index.html":"Where to apply for a South African passport, which banks name it, the Department of Home Affairs document list, consent for a child, and the fee each official page states.",
+ "smart-id-status/index.html":"How the Department of Home Affairs and each bank say you hear that a Smart ID is ready, and which official page states a time. No guessed waiting period.",
+ "temporary-id-certificate/index.html":"A temporary identity certificate on the DHA identity documents page: R70, valid for two months, after a fingerprint check. Bank pages that do not mention one are left out.",
+ "no-home-affairs-appointments/index.html":"If Home Affairs shows no appointment, the BABS notice still serves walk-ins, and some bank branches do not use that booking system. A first ID still goes to an office.",
+ "cities/johannesburg/index.html":"Smart ID bank branches whose DHA city field is Johannesburg, as cards you can filter by bank. Soweto and Sandton are different city values.",
+ "cities/pretoria/index.html":"Smart ID bank branches whose DHA city field is Pretoria, as cards you can filter by bank. Centurion is a different city value.",
+ "cities/cape-town/index.html":"Smart ID bank branches whose DHA city field is Cape Town, as cards you can filter by bank. Other Western Cape towns stay on the province page.",
+ "cities/durban/index.html":"Smart ID bank branches whose DHA city field is Durban, as cards you can filter by bank. Other KwaZulu-Natal towns stay on the province page.",
  "disclaimer/index.html":"This independent site is not affiliated with any government, bank or agency. General information only, with no warranty and no liability for how you use it.",
  "find/index.html":"Every page on this guide, listed by topic.",
  "provinces/index.html":"Smart ID bank branches in every South African province, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm before you travel.",
 }
 for _pid,_n,_s in BANKS:
     _shown="First National Bank" if _n=="FNB" else _n
-    SUMMARIES[f"banks/{_s}/index.html"]=f"{_shown} Smart ID and passport branch service: walk-in or booking, client requirement, fees and branch list. Sourced from the Department of Home Affairs."
+    SUMMARIES[f"banks/{_s}/index.html"]=f"{_shown} Smart ID branches, booking and walk-ins: the client rule, the fee, and the branch list from the Department of Home Affairs locator."
 for _p in PROV:
     SUMMARIES[f"provinces/{slug(_p)}/index.html"]=f"Bank branches in {_p} for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go."
 ALIASES={
@@ -511,7 +620,14 @@ ALIASES={
  "date-of-birth-or-gender/index.html":"date of birth gender sex description rectify DHA-526",
  "first-smart-id-at-16/index.html":"first ID 16 sixteen youth child minor",
  "applying-for-a-passport/index.html":"passport child consent tourist maxi",
- "collecting-smart-id-or-passport/index.html":"collect collection ready delivery",
+ "collecting-smart-id-or-passport/index.html":"collect collection ready delivery booking",
+ "smart-id-status/index.html":"status check track trace how long sms",
+ "temporary-id-certificate/index.html":"temporary id certificate TIC R70 two months",
+ "no-home-affairs-appointments/index.html":"no appointments available home affairs booking slots",
+ "cities/johannesburg/index.html":"johannesburg joburg smart id branches",
+ "cities/pretoria/index.html":"pretoria smart id branches",
+ "cities/cape-town/index.html":"cape town smart id branches",
+ "cities/durban/index.html":"durban smart id branches",
  "banks/capitec/index.html":"Capitec walk-in",
  "banks/standard-bank/index.html":"Standard Bank",
  "banks/fnb/index.html":"FNB First National Bank",
@@ -524,16 +640,23 @@ ALIASES={
 for _p in PROV:
     ALIASES[f"provinces/{slug(_p)}/index.html"]=_p+" province branches"
 READ_NEXT={
- "index.html":["fees-and-documents/index.html","booking-and-walk-ins/index.html","provinces/index.html"],
+ "index.html":["cities/johannesburg/index.html","fees-and-documents/index.html","booking-and-walk-ins/index.html"],
  "fees-and-documents/index.html":["name-or-surname-change/index.html","booking-and-walk-ins/index.html","green-id-book-to-smart-id/index.html"],
- "booking-and-walk-ins/index.html":["name-or-surname-change/index.html","fees-and-documents/index.html","provinces/index.html"],
+ "booking-and-walk-ins/index.html":["no-home-affairs-appointments/index.html","fees-and-documents/index.html","provinces/index.html"],
  "green-id-book-to-smart-id/index.html":["fees-and-documents/index.html","lost-or-stolen-smart-id/index.html","booking-and-walk-ins/index.html"],
  "lost-or-stolen-smart-id/index.html":["name-or-surname-change/index.html","fees-and-documents/index.html","collecting-smart-id-or-passport/index.html"],
  "name-or-surname-change/index.html":["date-of-birth-or-gender/index.html","fees-and-documents/index.html","applying-for-a-passport/index.html"],
  "date-of-birth-or-gender/index.html":["name-or-surname-change/index.html","fees-and-documents/index.html","banks/standard-bank/index.html"],
  "first-smart-id-at-16/index.html":["fees-and-documents/index.html","applying-for-a-passport/index.html","booking-and-walk-ins/index.html"],
  "applying-for-a-passport/index.html":["name-or-surname-change/index.html","fees-and-documents/index.html","collecting-smart-id-or-passport/index.html"],
- "collecting-smart-id-or-passport/index.html":["booking-and-walk-ins/index.html","applying-for-a-passport/index.html","fees-and-documents/index.html"],
+ "collecting-smart-id-or-passport/index.html":["smart-id-status/index.html","applying-for-a-passport/index.html","fees-and-documents/index.html"],
+ "smart-id-status/index.html":["collecting-smart-id-or-passport/index.html","temporary-id-certificate/index.html","booking-and-walk-ins/index.html"],
+ "temporary-id-certificate/index.html":["fees-and-documents/index.html","smart-id-status/index.html","lost-or-stolen-smart-id/index.html"],
+ "no-home-affairs-appointments/index.html":["booking-and-walk-ins/index.html","banks/capitec/index.html","first-smart-id-at-16/index.html"],
+ "cities/johannesburg/index.html":["cities/pretoria/index.html","provinces/gauteng/index.html","booking-and-walk-ins/index.html"],
+ "cities/pretoria/index.html":["cities/johannesburg/index.html","provinces/gauteng/index.html","banks/capitec/index.html"],
+ "cities/cape-town/index.html":["provinces/western-cape/index.html","cities/durban/index.html","booking-and-walk-ins/index.html"],
+ "cities/durban/index.html":["provinces/kwazulu-natal/index.html","cities/cape-town/index.html","banks/capitec/index.html"],
  "banks/capitec/index.html":["banks/standard-bank/index.html","booking-and-walk-ins/index.html","provinces/index.html"],
  "banks/standard-bank/index.html":["name-or-surname-change/index.html","banks/fnb/index.html","fees-and-documents/index.html"],
  "banks/fnb/index.html":["banks/absa/index.html","fees-and-documents/index.html","booking-and-walk-ins/index.html"],
@@ -577,9 +700,53 @@ for n,s,w,c,f in rowsb:
     cnt=f"{counts[s]}{src('locator')}" if s in counts else f"Not listed in DHA locator{src('locator')}"
     banktbl+=f'<tr><td><a href="banks/{s}/index.html">{n}</a></td><td>{cnt}</td><td>{w}</td><td>{c}</td><td>{f}</td></tr>'
 banktbl+='</table></div>'
-body=f'''<h1>Smart ID and passport services at South African bank branches</h1>
-<p>A plain, sourced guide to which bank branches can take your Smart ID (and in some cases passport) application, what to bring, and what it costs.</p>
-{start_here_html()}
+def _choice(href,title,detail):
+    return f'<li><a class="choice" href="{href}"><span class="ct">{H.escape(title)}</span><span class="cn">{H.escape(detail)}</span></a></li>'
+_bank_choices=[]
+for _pid,_n,_s in BANKS:
+    if _s in counts: _detail=f"{counts[_s]} branches in the DHA locator"
+    else: _detail="6 branches on Nedbank's own page"
+    _bank_choices.append(_choice(f"banks/{_s}/index.html",_n,_detail))
+_prov_choices=[]
+for _p in PROV:
+    _nd=sum(1 for _s in dp for _b in dp[_s] if _b["province"]==_p)
+    _prov_choices.append(_choice(f"provinces/{slug(_p)}/index.html",_p,f"{_nd} Digital Partnership branches"))
+_city_choices=[]
+for _label,_sl,_prov in (("Johannesburg","johannesburg","Gauteng"),("Pretoria","pretoria","Gauteng"),("Cape Town","cape-town","Western Cape"),("Durban","durban","KwaZulu-Natal")):
+    _nc=sum(1 for _s in dp for _b in dp[_s] if _b["city"].strip().lower()==_label.lower())
+    _city_choices.append(_choice(f"cities/{_sl}/index.html",_label,f"{_nc} locator branches"))
+def nearest_json():
+    rows=[]
+    for _sl,_branches in dp.items():
+        _bank=next(_n for _pid,_n,_s in BANKS if _s==_sl)
+        for _b in _branches:
+            hit=pin_for(_sl,_b['branchName'],_b.get('suburb') or '',_b['city'],_b.get('postal_code'))
+            if not hit: continue
+            rows.append({"bank":_bank,"name":_b['branchName'],"city":_b['city'],"lat":hit[0],"lon":hit[1],"directions":dir_url(dp_address(_b))})
+    for _name,_city,_line,_prov in NED_BRANCHES:
+        hit=pin_for("nedbank",_name,_line,_city,"")
+        if not hit: continue
+        _addr=", ".join(p for p in [_name,_line,_city,_prov,"South Africa"] if p)
+        rows.append({"bank":"Nedbank","name":_name,"city":_city,"lat":hit[0],"lon":hit[1],"directions":dir_url(_addr)})
+    return json_ld(rows)
+finder=f'''<section class="finder" aria-labelledby="finder-title"><h2 id="finder-title">Find a branch</h2>
+<div class="finder-cols">
+<div><h3>Pick your bank</h3><ul class="choice-grid">{''.join(_bank_choices)}</ul></div>
+<div><h3>Pick your province</h3><ul class="choice-grid">{''.join(_prov_choices)}</ul></div>
+<div><h3>Use my location</h3>
+<p>Press the button to use this device's location. The coordinates stay in the browser. This site has no server to receive them.</p>
+<button type="button" class="btn" id="use-location">Use my location</button>
+<p id="location-status" aria-live="polite">Nothing is looked up until you press the button.</p>
+<ul id="nearest-list" class="branch-cards"></ul>
+<script type="application/json" id="nearest-data">{nearest_json()}</script>
+</div>
+</div>
+<h3>Or pick a city</h3>
+<ul class="city-row">{''.join(_city_choices)}</ul>
+</section>'''
+body=f'''<h1>Smart ID at banks near you</h1>
+<p class="lede">Pick a bank, a province, or a city. This guide lists the branches from the Department of Home Affairs locator, and what each official page says about walk-ins, booking, fees and documents.</p>
+{finder}
 {top_tasks_html()}
 <div class="card"><strong>Two different systems exist.</strong><ol>
 <li><strong>DHA Digital Partnership</strong> (since 9 March 2026{src('golive')}): bank staff process the application through a secure link to DHA. Currently for green ID book to Smart ID conversion and Smart ID re-issues only{src('digital')}. DHA's live locator lists the branches{src('locator','locms')}.</li>
@@ -592,7 +759,7 @@ body=f'''<h1>Smart ID and passport services at South African bank branches</h1>
 <h2>What is available at bank branches</h2><div class="card"><p>Available under the Digital Partnership: Smart ID re-issues (lost, stolen, damaged) and green ID book to Smart ID replacements{src('digital')}. What DHA and each bank say about that re-issue: <a href="lost-or-stolen-smart-id/index.html">Replacing a lost or stolen Smart ID</a>. Whether the green ID book is still valid, and what each bank says about that switch: <a href="green-id-book-to-smart-id/index.html">Green ID book to Smart ID</a>.</p>
 <p>Not yet available there, on the Digital Partnership page: passport applications (phase 1), first-time IDs (for example turning 16), late birth registration, name changes, amendments to personal details, complex civic services{src('digital')}. A 22 July 2026 statement said adult and minor passports and first-time Smart IDs would be added before the end of the year{src('absams')}. A 26 October 2026 statement says the Department will shortly roll out passport, first-time Smart ID, and home delivery services through these bank branches, and that within a matter of months those services, including delivery to a doorstep, will be available at over one thousand bank branches{src('m1m')}. Where a passport application can be made, and which bank page names one: <a href="applying-for-a-passport/index.html">Applying for a passport</a>. What a first ID at 16 requires at a Home Affairs office: <a href="first-smart-id-at-16/index.html">First Smart ID at 16</a>. A forename or surname change, the fee, and which bank will print a Smart ID only after Home Affairs has already changed the surname: <a href="name-or-surname-change/index.html">Name or surname change</a>. Correcting a date of birth, a recorded sex or a place of birth, which that bank list does not name: <a href="date-of-birth-or-gender/index.html">Date of birth or gender</a>.</p></div>
 <h2>Short FAQ</h2>'''+''.join(f'<div class="card"><strong>{q}</strong><p>{a}</p></div>' for q,a in faq)+all_topics_html()
-page('index.html',"Smart ID and passport at SA bank branches: sourced guide",body,"Which South African bank branches offer Smart ID and passport services, walk-in or booking, fees, documents. Sourced from DHA and bank pages.",faq=faq)
+page('index.html',"Smart ID at banks near you: Capitec, FNB, Standard Bank",body,"Which South African bank branches offer a Smart ID near you, including Capitec, FNB, Standard Bank, Absa and Nedbank, with walk-in and booking rules.",faq=faq)
 # FEES
 fb=f'''<h1>Fees, documents and age rules</h1>
 <h2>DHA fees (tariffs)</h2><div class="wrap"><table><tr><th>Service</th><th>DHA fee</th><th>Source</th></tr>
@@ -605,7 +772,7 @@ fb=f'''<h1>Fees, documents and age rules</h1>
 <tr><td>Tourist passport when previous one is still valid for 6 months or longer</td><td>R1 200</td><td>{src('travel')}</td></tr>
 <tr><td>Maxi passport when previous one is still valid for 6 months or longer</td><td>R2 400</td><td>{src('travel')}</td></tr>
 <tr><td>Minor passport when previous one is still valid for 6 months or longer</td><td>R1 200</td><td>{src('travel')}</td></tr></table></div>
-<p>DHA's fee page is marked "updated August 2026"{src('fees')}. Bank convenience fees are separate; see each bank page. DHA: "Banks may charge a convenience fee"{src('digital')}. A passport that has run out of visa pages, an application at a mission, a lost passport, and an emergency travel certificate are not all in the table above. Those rules, and where a passport application can be made: <a href="../applying-for-a-passport/index.html">Applying for a passport</a>. The fees to change a forename or a surname, which are separate lines from the R140 identity-document re-issue, are on <a href="../name-or-surname-change/index.html">Name or surname change</a>. The R70.00 line for any amendment to the birth register, and where a date of birth or a gender rectification sits against it, is on <a href="../date-of-birth-or-gender/index.html">Date of birth or gender</a>.</p>
+<p>DHA's fee page is marked "updated August 2026"{src('fees')}. The temporary identity certificate line is R70.00 on that page. How long one DHA page says it lasts, and which bank pages do not mention it: <a href="../temporary-id-certificate/index.html">Temporary identity certificate</a>. Bank convenience fees are separate; see each bank page. DHA: "Banks may charge a convenience fee"{src('digital')}. A passport that has run out of visa pages, an application at a mission, a lost passport, and an emergency travel certificate are not all in the table above. Those rules, and where a passport application can be made: <a href="../applying-for-a-passport/index.html">Applying for a passport</a>. The fees to change a forename or a surname, which are separate lines from the R140 identity-document re-issue, are on <a href="../name-or-surname-change/index.html">Name or surname change</a>. The R70.00 line for any amendment to the birth register, and where a date of birth or a gender rectification sits against it, is on <a href="../date-of-birth-or-gender/index.html">Date of birth or gender</a>.</p>
 <div class="card note">The DHA Smart ID requirements brochure says first-time Smart ID issue is free for youth 16 and older and for pensioners 60 and older, and R140 for other citizens converting from a green ID book{src('sidpdf')}. Several bank pages charge R140 for green ID book conversions{src('cap','fnb')}. FNB states senior citizens (60+) do not pay for their first Smart ID{src('fnb')}. Whether the green ID book is still valid, the dates announced in October 2026, and which source states a free switch for a person of 60 or older: <a href="../green-id-book-to-smart-id/index.html">Green ID book to Smart ID</a>.</div>
 <h2>Documents to bring</h2>
 <div class="card"><strong>Digital Partnership bank branches (walk-in model)</strong><p>"You do not need to bring any documents."{src('digital')} Capitec: no documents needed, but bring your green ID book if opening an account during the visit{src('cap')}. FNB Smart ID replacement: no documentation needed{src('fnb')}.</p></div>
@@ -663,33 +830,89 @@ info={
 <li>Passports: Nedbank says DHA officials issue IDs and passports at these branches{src('ned')}.</li>
 <li>Extra Nedbank fee: not stated by source.</li></ul>'''),
 }
+WALK={
+"capitec":f'Yes. DHA says Capitec allows walk-ins without an appointment{src("digital")}.',
+"standard-bank":f'Yes in branch. The online route uses a booking{src("sb")}.',
+"fnb":f'No appointment for a Smart ID replacement. The eHomeAffairs route uses a booking{src("fnblive")}.',
+"absa":f'Book online, in the app, or walk in{src("absa")}.',
+"nedbank":f'Booking via eHomeAffairs. Nedbank does not describe a walk-in{src("ned")}.',
+}
+BANK_LINK={"capitec":("cap","Capitec"),"standard-bank":("sb","Standard Bank"),"fnb":("fnblive","FNB"),"absa":("absa","Absa"),"nedbank":("ned","Nedbank")}
 for pid,n,s in BANKS:
-    b=f'<h1>{n}: Smart ID and passport at branches</h1><div class="card">{info[s]}</div><p>Booking steps for this bank, and how they differ from a Home Affairs office appointment (BABS): <a href="../../booking-and-walk-ins/index.html">Booking and walk-ins</a>. Replacing a lost or stolen card, and where a source mentions an affidavit or the police: <a href="../../lost-or-stolen-smart-id/index.html">Replacing a lost or stolen Smart ID</a>. A first Smart ID at 16, and whether this bank states that it takes one: <a href="../../first-smart-id-at-16/index.html">First Smart ID at 16</a>. When the document is ready, what this bank says about collection: <a href="../../collecting-smart-id-or-passport/index.html">Collecting a Smart ID or passport</a>. Switching from a green ID book, including whether that book is still valid: <a href="../../green-id-book-to-smart-id/index.html">Green ID book to Smart ID</a>. Applying for a passport, and whether this bank page names one: <a href="../../applying-for-a-passport/index.html">Applying for a passport</a>. A forename or surname change, then a new Smart ID: <a href="../../name-or-surname-change/index.html">Name or surname change</a>. A wrong date of birth, recorded sex or place of birth: <a href="../../date-of-birth-or-gender/index.html">Date of birth or gender</a>.</p>'
+    count_bit=f'{counts[s]} Digital Partnership branches' if s in counts else 'Not in the DHA locator'
+    b=f'<h1>{BANK_H1[n]}</h1><div class="summary"><p><strong>{count_bit}</strong> on {D}. <strong>Walk-in:</strong> {WALK[s]} <strong>Booking:</strong> <a href="../../booking-and-walk-ins/index.html">how this differs from a Home Affairs appointment</a>.</p></div><div class="card">{info[s]}</div><p>Replacing a lost or stolen card: <a href="../../lost-or-stolen-smart-id/index.html">Replacing a lost or stolen Smart ID</a>. A first Smart ID at 16: <a href="../../first-smart-id-at-16/index.html">First Smart ID at 16</a>. Collection: <a href="../../collecting-smart-id-or-passport/index.html">Smart ID collection booking</a>. The green ID book deadline: <a href="../../green-id-book-to-smart-id/index.html">Green ID book deadline</a>. A passport: <a href="../../applying-for-a-passport/index.html">Applying for a passport</a>. A forename or surname: <a href="../../name-or-surname-change/index.html">Name or surname change</a>. A date of birth or recorded sex: <a href="../../date-of-birth-or-gender/index.html">Date of birth or gender</a>. How long a card takes, where a source states it: <a href="../../smart-id-status/index.html">Smart ID status</a>.</p>'
+    groups=''
     if s in dp:
         table,points=dptable(dp[s],showprov=True)
-        b+=f'<h2>{n} Digital Partnership branches ({len(dp[s])}){src("locator")}</h2><p>Data from the DHA partner branch locator on {D}. Confirm before visiting.</p>{map_html(points,"Map of "+n+" branches with a placed address")}{FILTER}{table}'
-    if s=="nedbank":
-        b+=ned_section()
-    lg=[l for l in leg if l['name'].upper().startswith(n.upper().split()[0])]
+        groups+=f'<div class="branch-group"><h2>{n} Digital Partnership branches ({len(dp[s])}){src("locator")}</h2><p>Data from the DHA partner branch locator on {D}. Every row was marked RE_ISSUE. No row listed a passport product code. Confirm before visiting.</p>{map_html(points,"Map of "+n+" branches with a placed address")}{table}</div>'
+    lg=[l for l in leg if bank_of_name(l['name'])==n]
     if lg:
-        b+=f'<h2>{n} eHomeAffairs bank branches listed by DHA{src("legacy")}</h2><p>Booking required; DHA states no walk-ins.</p>{legacy_table(lg,True)}'
-    page(f'banks/{s}/index.html',bank_title(n),b,bank_desc(n))
+        groups+=f'<div class="branch-group"><h2>{n} eHomeAffairs bank branches listed by DHA{src("legacy")}</h2><p>Booking required; DHA states no walk-ins.</p>{legacy_table(lg,True)}</div>'
+    if s=="nedbank":
+        groups+=ned_section()
+    elif groups:
+        b+=branch_tools([n])+groups
+    else:
+        b+=groups
+    src_key,src_label=BANK_LINK[s]
+    page(f'banks/{s}/index.html',bank_title(n),b,bank_desc(n),checked_against=[(S['digital'],'the Department of Home Affairs'),(S[src_key],src_label)])
 # PROVINCES
-pi='<h1>Branches by province</h1><ul>'+''.join(f'<li><a href="provinces/{slug(p)}/index.html">{p}</a></li>' for p in PROV)+'</ul>'
+pi='''<h1>Smart ID bank branches by province</h1>
+<p>Pick a province, or open a city page. A city page uses the city string the Department of Home Affairs published. It does not add suburbs that the locator filed under a different city.</p>
+<ul class="city-row"><li><a href="../cities/johannesburg/index.html"><span>Johannesburg</span></a></li><li><a href="../cities/pretoria/index.html"><span>Pretoria</span></a></li><li><a href="../cities/cape-town/index.html"><span>Cape Town</span></a></li><li><a href="../cities/durban/index.html"><span>Durban</span></a></li></ul>
+<ul class="choice-grid">'''+''.join(f'<li><a class="choice" href="provinces/{slug(p)}/index.html"><span class="ct">{p}</span><span class="cn">{sum(1 for s in dp for b in dp[s] if b["province"]==p)} Digital Partnership branches</span></a></li>' for p in PROV)+'</ul>'
 page('provinces/index.html',"Smart ID at banks by province: Capitec, FNB, Absa branches",pi,"Smart ID bank branches in every South African province, from the DHA Digital Partnership locator and the older eHomeAffairs lists. Confirm before you travel.")
 PROVBANK={'Eastern Cape':'ecb','Free State':'fsb','Gauteng':'gtb','KwaZulu-Natal':'kznb','Limpopo':'limb','Mpumalanga':'mpub','North West':'nwb','Northern Cape':'ncb','Western Cape':'wcb'}
+PROV_CITIES={
+"Gauteng":[("Johannesburg","../../cities/johannesburg/index.html"),("Pretoria","../../cities/pretoria/index.html")],
+"Western Cape":[("Cape Town","../../cities/cape-town/index.html")],
+"KwaZulu-Natal":[("Durban","../../cities/durban/index.html")],
+}
 for p in PROV:
     rows=[b for s in dp for b in dp[s] if b['province']==p]
     table,points=dptable(rows,showbank=True)
-    b=f'<h1>Smart ID bank branches in {p}</h1><p>{len(rows)} Digital Partnership branches listed in the DHA locator on {D}{src("locator")}. These handle Smart ID re-issues and green ID book conversions{src("digital")}. Check each <a href="../../index.html">bank\'s rules</a> (most require you to be a client). Whether the green ID book is still valid, and what each bank says about that switch: <a href="../../green-id-book-to-smart-id/index.html">Green ID book to Smart ID</a>.</p>{map_html(points,"Map of bank branches in "+p+" with a placed address")}{FILTER}{table}'
+    city_links=''.join(f'<a href="{href}">{label}</a>' for label,href in PROV_CITIES.get(p,[]))
+    city_sentence=f' City pages: {city_links}.' if city_links else ''
+    banks=sorted({b['_bank'] for b in rows})
+    b=f'<h1>{province_title(p)}</h1><div class="summary"><p><strong>{len(rows)} Digital Partnership branches</strong> in the DHA locator on {D}{src("locator")}. <strong>Walk-in:</strong> DHA says Capitec and Standard Bank allow walk-ins without an appointment{src("digital")}. <strong>Booking:</strong> <a href="../../booking-and-walk-ins/index.html">eHomeAffairs branches need a booking</a>.</p></div><p>These locator rows are Smart ID re-issues and green ID book conversions{src("digital")}. Every row on {D} was marked RE_ISSUE. No row listed a passport product code. The biggest city name people search for here is {PROVINCE_CITY[p]}.{city_sentence} The green ID book deadline: <a href="../../green-id-book-to-smart-id/index.html">Green ID book deadline</a>.</p>{map_html(points,"Map of bank branches in "+p+" with a placed address")}{branch_tools(banks)}<div class="branch-group"><h2>Digital Partnership branches</h2>{table}</div>'
     lg=[l for l in leg if l['prov']==p]
-    b+=f'<h2>eHomeAffairs bank branches in {p}{src("legacy")}</h2>'
-    if lg: b+=f'<p>Apply and book online first. DHA\'s {p} bank-branch page says no walk-ins are allowed at banks{src(PROVBANK[p])}. See <a href="../../booking-and-walk-ins/index.html">Booking and walk-ins</a>.</p>{legacy_table(lg,False)}'
-    else: b+='<p>DHA lists none for this province.</p>'
-    page(f'provinces/{slug(p)}/index.html',province_title(p),b,province_desc(p))
+    if lg:
+        b+=f'<div class="branch-group"><h2>eHomeAffairs bank branches in {p}{src("legacy")}</h2><p>Apply and book online first. DHA\'s {p} bank-branch page says no walk-ins are allowed at banks{src(PROVBANK[p])}.</p>{legacy_table(lg,False)}</div>'
+    else:
+        b+=f'<h2>eHomeAffairs bank branches in {p}</h2><p>DHA lists none for this province.</p>'
+    page(f'provinces/{slug(p)}/index.html',province_title(p),b,province_desc(p),checked_against=[(S['locator'],'the DHA branch locator'),(S['digital'],'the Digital Partnership page')])
+CITY_PAGES=[
+("Johannesburg","johannesburg","Gauteng","Johannesburg Smart ID branches: Capitec, FNB, Absa","Smart ID bank branches in Johannesburg from the DHA city field, as cards you can filter by bank. Soweto and Sandton are separate city values."),
+("Pretoria","pretoria","Gauteng","Pretoria Smart ID bank branches: Capitec, FNB, Absa","Smart ID bank branches in Pretoria from the DHA city field, as cards you can filter by bank. Centurion is a separate city value."),
+("Cape Town","cape-town","Western Cape","Cape Town Smart ID branches: Capitec, FNB and Absa","Smart ID bank branches in Cape Town from the DHA city field, as cards you can filter by bank. Other Cape towns stay on the province page."),
+("Durban","durban","KwaZulu-Natal","Durban Smart ID bank branches: Capitec, FNB and Absa","Smart ID bank branches in Durban from the DHA city field, as cards you can filter by bank. Other KwaZulu-Natal towns stay on the province page."),
+]
+for _label,_sl,_prov,_title,_desc in CITY_PAGES:
+    rows=[b for s in dp for b in dp[s] if b['city'].strip().lower()==_label.lower()]
+    if not rows: raise SystemExit('No locator rows for '+_label)
+    table,points=dptable(rows,showbank=True)
+    ncards,npoints=ned_cards(_label)
+    lg=[l for l in leg if l['city'].strip().lower()==_label.lower()]
+    banks=sorted({b['_bank'] for b in rows})
+    if npoints or ncards.strip()!='<ul class="branch-cards"></ul>':
+        if "Nedbank" not in banks: banks.append("Nedbank")
+    names=[b['branchName'] for b in rows]
+    body_city=f'''<h1>{_label} Smart ID branches</h1>
+<div class="summary"><p><strong>{len(rows)} Digital Partnership branches</strong> whose city field is {_label} in the DHA locator on {D}{src("locator")}. <strong>Walk-in:</strong> DHA says Capitec and Standard Bank allow walk-ins without an appointment{src("digital")}. <strong>Booking:</strong> <a href="../../booking-and-walk-ins/index.html">a Home Affairs office uses a different booking system</a>.</p></div>
+<p>This page keeps the city string the locator published. A branch filed under another city, including a suburb of the same metro, stays on the <a href="../../provinces/{slug(_prov)}/index.html">{_prov}</a> page. Every locator row on {D} was marked RE_ISSUE. No row listed a passport product code. The feed does not define what RE_ISSUE covers{src("api")}.</p>
+{map_html(points+npoints,"Map of bank branches in "+_label+" with a placed address")}
+{branch_tools(banks)}
+<div class="branch-group"><h2>Digital Partnership branches in {_label}</h2>{table}</div>'''
+    if lg:
+        body_city+=f'<div class="branch-group"><h2>Older eHomeAffairs list{src("legacy")}</h2><p>DHA\'s {_prov} bank-branch page says no walk-ins are allowed at these bank offices{src(PROVBANK[_prov])}.</p>{legacy_table(lg,False)}</div>'
+        names+=[l['name'] for l in lg]
+    if ncards.strip()!='<ul class="branch-cards"></ul>':
+        body_city+=f'<div class="branch-group"><h2>Nedbank\'s own list{src("ned")}</h2><p>These addresses are from Nedbank\'s page. Nedbank was not in the DHA locator on {D}{src("locator")}.</p>{ncards}</div>'
+        names+=[name for name,city,line,prov in NED_BRANCHES if city.strip().lower()==_label.lower()]
+    page(f'cities/{_sl}/index.html',_title,body_city,_desc,checked_against=[(S['locator'],'the DHA branch locator'),(S['digital'],'the Digital Partnership page')],item_names=names)
 PROVLINKS=' '.join(f'<a href="{S[k]}" rel="noopener">{label}</a>' for k,label in [('ecb','Eastern Cape'),('fsb','Free State'),('gtb','Gauteng'),('kznb','KwaZulu-Natal'),('limb','Limpopo'),('mpub','Mpumalanga'),('nwb','North West'),('ncb','Northern Cape'),('wcb','Western Cape')])
 bb=f'''<h1>Booking a Smart ID: BABS, bank branches and walk-ins</h1>
-<p>A common question is whether a Smart ID at a bank is booked on DHA's Branch Appointment Booking System (BABS), and whether a walk-in is accepted. Official pages describe three different ways to apply. This page says which way books a Home Affairs office, which way books a bank, and what each official page says about walk-ins. Fees, documents and age rules are on <a href="../fees-and-documents/index.html">Fees and documents</a>. Branch lists are on the <a href="../banks/capitec/index.html">bank</a> and <a href="../provinces/index.html">province</a> pages.</p>
+<p>A common question is whether a Smart ID at a bank is booked on DHA's Branch Appointment Booking System (BABS), and whether a walk-in is accepted. Official pages describe three different ways to apply. This page says which way books a Home Affairs office, which way books a bank, and what each official page says about walk-ins. If the booking screen shows no slot, the options that official pages do state are on <a href="../no-home-affairs-appointments/index.html">No Home Affairs appointments</a>. Fees, documents and age rules are on <a href="../fees-and-documents/index.html">Fees and documents</a>. Branch lists are on the <a href="../banks/capitec/index.html">bank</a> and <a href="../provinces/index.html">province</a> pages.</p>
 <div class="card note"><strong>BABS does not book a bank branch.</strong>
 <p>DHA's BABS notice answers the difference in its own words: eHomeAffairs "allows the client to make a booking, upload documents and make payment then be processed at the Banks", while BABS "provides a client with an opportunity to book a time slot to get in the office." Both let you book a time slot for an application{src('babs')}.</p>
 <p>The older address <a href="{S['babsmove']}" rel="noopener">services.dha.gov.za</a> says the Branch Appointment Booking System has moved, and that it is now on MyHomeAffairsOnline. The button on that page goes to <a href="{S['mhao']}" rel="noopener">myhomeaffairsonline.dha.gov.za</a>{src('babsmove')}.</p></div>
@@ -995,8 +1218,8 @@ ft=f'''<h1>First Smart ID at 16</h1>
 </ul></div>
 <p>Back to the <a href="../index.html">home page</a>, <a href="../fees-and-documents/index.html">fees and documents</a>, <a href="../booking-and-walk-ins/index.html">booking and walk-ins</a>, and the bank pages: <a href="../banks/capitec/index.html">Capitec</a>, <a href="../banks/standard-bank/index.html">Standard Bank</a>, <a href="../banks/fnb/index.html">FNB</a>, <a href="../banks/absa/index.html">Absa</a>, <a href="../banks/nedbank/index.html">Nedbank</a>.</p>'''
 page('first-smart-id-at-16/index.html',"First Smart ID at 16: documents, parents, fees and banks",ft,"First South African Smart ID at 16: DHA document lists, who must attend, the free first issue, and which banks do not take a first-time applicant.",checked="26 October 2026")
-col=f'''<h1>Collecting a Smart ID or passport</h1>
-<p>This page is for the step after you have applied: how the Department of Home Affairs (DHA) or the bank tells you a Smart ID or passport is ready, where and when you collect it, what to bring, who may collect it, and any deadline a source states. How to apply is on <a href="../booking-and-walk-ins/index.html">Booking and walk-ins</a>. Tariffs and the application document lists are on <a href="../fees-and-documents/index.html">Fees and documents</a>. A card that was lost or stolen: <a href="../lost-or-stolen-smart-id/index.html">Replacing a lost or stolen Smart ID</a>. A first identity document from age 16: <a href="../first-smart-id-at-16/index.html">First Smart ID at 16</a>. Switching from a green ID book, including whether that book is still valid: <a href="../green-id-book-to-smart-id/index.html">Green ID book to Smart ID</a>.</p>
+col=f'''<h1>Smart ID collection booking: notice, place and deadline</h1>
+<p>This page is for the step after you have applied, including a collection booking where an official page asks for one. It sets out how the Department of Home Affairs (DHA) or the bank tells you a Smart ID or passport is ready, where and when you collect it, what to bring, who may collect it, and any deadline a source states. How long a source says the card itself takes: <a href="../smart-id-status/index.html">Smart ID status</a>. How to apply is on <a href="../booking-and-walk-ins/index.html">Booking and walk-ins</a>. Tariffs and the application document lists are on <a href="../fees-and-documents/index.html">Fees and documents</a>. A card that was lost or stolen: <a href="../lost-or-stolen-smart-id/index.html">Replacing a lost or stolen Smart ID</a>. A first identity document from age 16: <a href="../first-smart-id-at-16/index.html">First Smart ID at 16</a>. Switching from a green ID book, including whether that book is still valid: <a href="../green-id-book-to-smart-id/index.html">Green ID book to Smart ID</a>.</p>
 <div class="card note"><strong>Do not copy one bank's collection rule onto another route.</strong>
 <p>The Digital Partnership page says you collect at the bank branch where the application was made, and that the partner bank communicates the collection details. Delivery is not in that answer{src('digital')}. The partner-branch page says you collect from your selected branch, or have the document delivered where the bank offers that{src('locator')}. Only Standard Bank states that you must collect your own ID, and only Standard Bank states a 12 month collection window{src('sb')}. Where another source is silent, this page says so.</p></div>
 <h2>At a Home Affairs office</h2>
@@ -1056,10 +1279,10 @@ col=f'''<h1>Collecting a Smart ID or passport</h1>
 <li>The screen or number you use to ask for a status if no message arrives. The contacts page and FNB print 0800 60 11 90. Standard Bank prints 0800 601 190 and says it does not control collection dates{src('dhacontact','fnb','sb')}.</li>
 </ul></div>
 <p>Back to the <a href="../index.html">home page</a>, <a href="../fees-and-documents/index.html">fees and documents</a>, <a href="../booking-and-walk-ins/index.html">booking and walk-ins</a>, and the bank pages: <a href="../banks/capitec/index.html">Capitec</a>, <a href="../banks/standard-bank/index.html">Standard Bank</a>, <a href="../banks/fnb/index.html">FNB</a>, <a href="../banks/absa/index.html">Absa</a>, <a href="../banks/nedbank/index.html">Nedbank</a>.</p>'''
-page('collecting-smart-id-or-passport/index.html',"Collecting a Smart ID or passport: notice, place, deadline",col,"When a South African Smart ID or passport is ready: how DHA and each bank notify you, where you collect, what to bring, who may collect, and deadlines.",checked="26 October 2026")
+page('collecting-smart-id-or-passport/index.html',"Smart ID collection booking: notice, place, deadline",col,"Smart ID collection booking: how DHA and each bank say a card is ready, where you collect, what to bring, who may collect, and any deadline.",checked="26 October 2026")
 # GREEN ID BOOK
-gr=f'''<h1>Switching a green ID book to a Smart ID</h1>
-<p>This page is for someone who still holds a green barcoded identity book and wants a Smart ID card. It sets out what the Department of Home Affairs (DHA), gov.za and each bank say about whether that book is still valid, the dates a minister has announced, what happens to the book, the fee, the documents, and which banks name this switch. A Smart ID card that was lost, stolen or damaged is a different application: <a href="../lost-or-stolen-smart-id/index.html">Replacing a lost or stolen Smart ID</a>. A first identity document, including at 16, for someone who has never held one: <a href="../first-smart-id-at-16/index.html">First Smart ID at 16</a>. The tariff table is on <a href="../fees-and-documents/index.html">Fees and documents</a>. How a bank visit differs from a Home Affairs office booking: <a href="../booking-and-walk-ins/index.html">Booking and walk-ins</a>.</p>
+gr=f'''<h1>Green ID book deadline and switching to a Smart ID</h1>
+<p>The deadline in the official announcements is 31 March 2027 for the end of production of the green ID book, and 31 March 2028 for the end of recognition{src('quantum','m1m')}. A minister said that on 1 October 2026, and a Department statement on 26 October 2026 repeated a production date and a recognition date in slightly different words{src('quantum','m1m')}. Those dates are not on the current application pages, and the Act text on gov.za does not contain the section the speech cites{src('iddocs','digital','idamd')}. The comparison is the next section. This page is for someone who still holds a green barcoded identity book and wants a Smart ID card. It sets out what the Department of Home Affairs (DHA), gov.za and each bank say about whether that book is still valid, what happens to the book, the fee, the documents, and which banks name this switch. A Smart ID card that was lost, stolen or damaged is a different application: <a href="../lost-or-stolen-smart-id/index.html">Replacing a lost or stolen Smart ID</a>. A first identity document, including at 16, for someone who has never held one: <a href="../first-smart-id-at-16/index.html">First Smart ID at 16</a>. The tariff table is on <a href="../fees-and-documents/index.html">Fees and documents</a>. How a bank visit differs from a Home Affairs office booking: <a href="../booking-and-walk-ins/index.html">Booking and walk-ins</a>.</p>
 <div class="card note"><strong>The end dates are in a speech. They are not on the current application pages.</strong>
 <p>On 1 October 2026 the Minister of Home Affairs announced that production of the green ID book would cease by 31 March 2027, and that on 31 March 2028 the book would cease to be recognised{src('quantum')}. A Department statement on 26 October 2026 says production will cease on 31 March 2027, and that recognition will be withdrawn by 31 March 2028{src('m1m')}. Those are not the same words as the speech. The current identity documents page and the Digital Partnership page do not name either date{src('iddocs','digital')}. The Identification Amendment Act says a green bar-coded identity document remains valid until it is replaced, or until a date the Minister fixes by notice in the Government Gazette, whichever is sooner{src('idamd')}. The speech and the 26 October statement do not say that a Gazette notice fixing 31 March 2028 has already been published. The identity documents page and the Digital Partnership page do not say that either{src('quantum','m1m','iddocs','digital')}.</p></div>
 <h2>What the Act and the 2013 notice say about validity</h2>
@@ -1150,7 +1373,7 @@ gr=f'''<h1>Switching a green ID book to a Smart ID</h1>
 <li>One document list that both a Home Affairs office and a bank will follow{src('iddocs','sidpdf','digital','n728')}.</li>
 </ul></div>
 <p>Back to the <a href="../index.html">home page</a>, <a href="../fees-and-documents/index.html">fees and documents</a>, <a href="../booking-and-walk-ins/index.html">booking and walk-ins</a>, and the bank pages: <a href="../banks/capitec/index.html">Capitec</a>, <a href="../banks/standard-bank/index.html">Standard Bank</a>, <a href="../banks/fnb/index.html">FNB</a>, <a href="../banks/absa/index.html">Absa</a>, <a href="../banks/nedbank/index.html">Nedbank</a>.</p>'''
-page('green-id-book-to-smart-id/index.html',"Green ID book to Smart ID: validity, fee and the banks",gr,"Switching a South African green ID book to a Smart ID: whether it is still valid, the dates announced for 2027 and 2028, the fee, and which banks take it.",checked="26 October 2026")
+page('green-id-book-to-smart-id/index.html',"Green ID book deadline and switching to a Smart ID",gr,"Green ID book deadline: 31 March 2027 and 31 March 2028, whether the book is still valid, the fee, and which banks take the switch.",checked="26 October 2026")
 # PASSPORT APPLICATION
 pp_faq=[
 ("Can I apply for a passport at a bank branch?",f"Not on every official page. The Digital Partnership page says a passport application is not yet available in phase 1, and that those clients must visit a Home Affairs office{src('digital')}. The partner-branch page says adult tourist passport applications are offered now, for citizens and naturalised citizens aged 18 and older, standard or maxi{src('locator')}. A gov.za statement of 26 October 2026 says passport services will shortly be rolled out through the bank branches{src('m1m')}. Standard Bank's online list names first-time passport issuing and passport renewal. FNB's eHomeAffairs steps name a passport. Capitec's article and Absa's Smart ID page do not{src('sb','fnb','cap','absa')}."),
@@ -1517,7 +1740,102 @@ disc=f'''<h1>Disclaimer</h1>
 <h2>Contact and corrections</h2>
 <p>This site has no contact desk, advice line or user account. It cannot take an application, book a slot, or correct a record at Home Affairs. If a fact looks wrong, open the linked official page and follow that page. Do not send an identity number, a passport number or any other personal document to this site. There is nowhere here that can receive it.</p>'''
 page('disclaimer/index.html',"Disclaimer: Smart ID at the Bank, an independent guide",disc,"This independent site is not affiliated with any government, bank or agency. General information only, with no warranty and no liability for how you use it.",checked="24 October 2026")
-hubs=[("/","Home"),("/fees-and-documents/","Fees and documents"),("/booking-and-walk-ins/","Booking and walk-ins"),("/lost-or-stolen-smart-id/","Lost or stolen ID"),("/first-smart-id-at-16/","First ID at 16"),("/collecting-smart-id-or-passport/","Collect your ID"),("/green-id-book-to-smart-id/","Green ID book"),("/applying-for-a-passport/","Passport"),("/name-or-surname-change/","Name or surname change"),("/date-of-birth-or-gender/","Date of birth or gender"),("/banks/capitec/","Capitec"),("/banks/standard-bank/","Standard Bank"),("/banks/fnb/","FNB"),("/banks/absa/","Absa"),("/banks/nedbank/","Nedbank"),("/provinces/","Provinces"),("/find/","All pages"),("/disclaimer/","Disclaimer")]
+st=f'''<h1>How to check Smart ID status and how long it takes</h1>
+<p>People ask for a status check and a number of days. The Department of Home Affairs identity documents page does not print a number of days for a Smart ID, and it does not name a web form. It says the department uses the cellphone number from the application to send updates about progress and about when the document is ready to collect{src('iddocs')}. At a Digital Partnership bank, updates come from the bank through its usual channels{src('digital')}. Only Standard Bank, on the page checked for this guide, states a production time for the smart ID: up to 4 weeks{src('sb')}.</p>
+<div class="card note"><strong>Do not treat a time in the branch as the time until the card is in your hand.</strong>
+<p>The Digital Partnership page says the time differs by bank and that services take approximately 15 minutes{src('digital')}. Capitec says the process normally takes only a few minutes in branch{src('cap')}. FNB says the in-branch process takes about 10 minutes{src('fnblive')}. Those sentences are about the visit. They are not a production time.</p></div>
+<h2>What DHA says about progress messages</h2>
+<div class="card"><ul>
+<li>The identity documents page says the department uses the cellphone number you provided to send updates about progress and readiness for collection{src('iddocs')}.</li>
+<li>That page does not use the word SMS, and it does not say how many messages arrive or what they say{src('iddocs')}.</li>
+<li>A Track and Trace article address on dha.gov.za returned "Article not found" on {D_NEW}. This page does not describe a form that address does not open. The address checked was the track-and-trace status article{src('trackold')}.</li>
+<li>The contacts page gives the Home Affairs call centre as 0800 60 11 90{src('dhacontact')}. FNB prints the same number for eHomeAffairs help{src('fnblive')}. Standard Bank prints 0800 601 190 and says it does not control DHA turnaround times, collection dates or cancellation notifications{src('sb')}.</li>
+</ul></div>
+<h2>What each bank states</h2>
+<div class="wrap"><table><tr><th>Source</th><th>How you hear it is ready</th><th>A time that source states</th></tr>
+<tr><td>Digital Partnership page</td><td>Updates come from the bank, through its usual service channels{src('digital')}.</td><td>About 15 minutes in the branch, and it differs by bank. A production time: not stated{src('digital')}.</td></tr>
+<tr><td><a href="../banks/standard-bank/index.html">Standard Bank</a></td><td>SMS updates at every step. On the online route, Home Affairs sends an SMS when the smart ID or passport is ready. You collect your own ID at the same branch. No home delivery for the smart ID{src('sb')}.</td><td>Typically up to 4 weeks, and other factors can affect that. You have 12 months to collect it after the ready notification. Payment must be made within 45 days or the application is cancelled. Standard Bank says it does not control DHA turnaround times{src('sb')}.</td></tr>
+<tr><td><a href="../banks/fnb/index.html">FNB</a></td><td>An SMS when a Smart ID or passport from the eHomeAffairs route is ready. An SMS or in-app notification for a replacement. Bring original identity documents when you collect{src('fnblive')}.</td><td>About 10 minutes in the branch. A number of days until the card is ready: not stated{src('fnblive')}.</td></tr>
+<tr><td><a href="../banks/capitec/index.html">Capitec</a></td><td>The article dated 11/03/2026 does not say how you are told the card is ready{src('cap')}.</td><td>A few minutes in the branch. A number of days: not stated{src('cap')}.</td></tr>
+<tr><td><a href="../banks/nedbank/index.html">Nedbank</a></td><td>An SMS when the smart ID card is ready. Collect it at the branch you selected{src('ned')}.</td><td>A number of days: not stated{src('ned')}.</td></tr>
+<tr><td>Absa</td><td>The Smart ID address previously used on this guide was not available on {D_NEW}. The self-service page says you can book online, use the app, or visit a participating branch{src('absahelp')}.</td><td>A number of days: not stated on that self-service page{src('absahelp')}.</td></tr>
+</table></div>
+<h2>Passport times are a different document</h2>
+<div class="card"><p>The travel documents page states issuance turnaround for passports, not for a Smart ID card. An ordinary tourist passport and a maxi passport: 13 working days. A minor tourist passport: 18 working days. An application lodged outside South Africa: at least six to eight months, because of the logistics{src('travel')}. Do not copy those figures onto a Smart ID. Where a passport application can be made: <a href="../applying-for-a-passport/index.html">Applying for a passport</a>.</p></div>
+<h2>A tracking answer that is not about a Smart ID</h2>
+<div class="card"><p>The My Home Affairs Online FAQ says to allow 8 to 10 weeks, and it says you track an application on the My Applications page. Those answers sit with the citizenship reinstatement questions. The same FAQ later answers branch booking: you must be logged in, a person who is not a South African citizen may book with a passport number, and you may cancel if you are logged in. The booking answers do not state a Smart ID waiting time{src('mhaofaq')}.</p></div>
+<h2>What these sources do not state</h2>
+<div class="card"><ul>
+<li>One number of days for every Smart ID, on the identity documents page or the Digital Partnership page{src('iddocs','digital')}.</li>
+<li>That the 15 minutes, the few minutes, or the 10 minutes is the wait until collection{src('digital','cap','fnblive')}.</li>
+<li>That Standard Bank's "up to 4 weeks" applies at Capitec, FNB, Absa, Nedbank, or a Home Affairs office{src('sb')}.</li>
+<li>A working status form at the track-and-trace article address checked on {D_NEW}{src('trackold')}.</li>
+</ul>
+<p>Where you collect, who may collect, and any deadline after the ready message: <a href="../collecting-smart-id-or-passport/index.html">Smart ID collection booking</a>.</p></div>'''
+page('smart-id-status/index.html',"How to check Smart ID status and how long it takes",st,"How the Department of Home Affairs and the banks say you hear a Smart ID is ready, and which official page states a time. No guessed number of days.",checked=D_NEW,checked_against=[(S['iddocs'],'the identity documents page'),(S['digital'],'the Digital Partnership page'),(S['sb'],'Standard Bank')])
+tc=f'''<h1>Temporary identity certificate: fee, how long, and where</h1>
+<p>A temporary identity certificate is not a Smart ID card, and it is not a temporary passport. On the identity documents page, in the section on re-issuing an ID book, DHA says a Temporary Identification Certificate (TIC), valid for two months, can be issued at a fee of R70.00. The application is subject to positive verification of your fingerprints{src('iddocs')}.</p>
+<h2>The fee on the tariff page</h2>
+<div class="card"><p>The fees page, marked updated August 2026, has its own line: "Temporary Identity Certificate: Issuing of a Temporary Identity Certificate (TIC)." The tariff is R70.00{src('fees')}. That line does not print "two months". The identity documents page does print two months, and it prints the same R70.00{src('iddocs','fees')}. The full tariff table is on <a href="../fees-and-documents/index.html">Fees and documents</a>.</p></div>
+<h2>A different instruction on gov.za</h2>
+<div class="card"><p>The gov.za page "Apply for an identity document" says that if your application for an identity document will not be completed in time for you to vote, you can apply for a temporary identity certificate. It says the TIC will cost R70.00. It says you will need an ID number for verification and 2 ID photos{src('idapply')}.</p>
+<p>That page does not print "two months". The identity documents page does not put the voting condition, or the two photos, in the TIC sentence itself{src('iddocs','idapply')}. Use the page for the counter you are standing at, and ask the office which list it is applying.</p></div>
+<h2>Where it is issued</h2>
+<div class="card"><ul>
+<li>The TIC sentence does not name a counter. It sits in the ID book re-issue section. The first-time instructions in that part of the page say you submit documents to the nearest Department of Home Affairs office or a South African mission or consulate abroad{src('iddocs')}.</li>
+<li>The Digital Partnership list of services at a bank does not include a temporary identity certificate. The "not yet available" list does not name one either{src('digital')}.</li>
+<li>Capitec's article dated 11/03/2026 does not mention a temporary identity certificate{src('cap')}.</li>
+<li>Standard Bank's Smart ID page does not mention one{src('sb')}.</li>
+<li>FNB's branch page does not mention one{src('fnblive')}.</li>
+<li>Absa's self-service page, checked on {D_NEW}, says you can book a Smart ID or passport online, use the app, or visit a participating branch. It does not mention a temporary certificate{src('absahelp')}.</li>
+<li>Nedbank says that if you lose the card you report it to the police and apply to the DHA for a new card, and that you must budget for the cost of a temporary ID if you need one while you wait. Nedbank does not say the branch issues it, and it does not print R70 or two months{src('ned')}.</li>
+</ul></div>
+<h2>Not a temporary passport</h2>
+<div class="card"><p>The travel documents page says the department no longer issues temporary passports, as of 1 September 2014{src('travel','tempnotice')}. A temporary identity certificate on the identity documents page is a different document{src('iddocs')}.</p></div>
+<h2>What these sources do not state</h2>
+<div class="card"><ul>
+<li>That a bank branch prints the certificate. None of the bank pages checked for this page says that{src('cap','sb','fnblive','absahelp','ned','digital')}.</li>
+<li>The day the two months start, or whether the certificate can be extended. The identity documents page says "valid for two months" and stops there{src('iddocs')}.</li>
+<li>A bank convenience fee for a TIC. The Digital Partnership page says banks may charge a convenience fee for a Smart ID card, which is a different product{src('digital','fees')}.</li>
+</ul>
+<p>Replacing a lost or stolen Smart ID, which is a separate application: <a href="../lost-or-stolen-smart-id/index.html">Replacing a lost or stolen Smart ID</a>. How you hear that the Smart ID itself is ready: <a href="../smart-id-status/index.html">Smart ID status</a>.</p></div>'''
+page('temporary-id-certificate/index.html',"Temporary identity certificate: fee, length, where",tc,"What DHA says a temporary identity certificate costs, how long that page says it lasts, and where it sits. Bank pages that do not mention one are left out.",checked=D_NEW,checked_against=[(S['iddocs'],'the identity documents page'),(S['fees'],'the DHA fees page')])
+na=f'''<h1>No Home Affairs appointments available: your options</h1>
+<p>If the booking screen has no slot, official pages do not publish a clock time when new slots appear. They do say what else you can do. BABS books a time at a Home Affairs office. It does not book a Digital Partnership bank branch{src('babs','digital')}. For a green ID book conversion or a Smart ID re-issue, Capitec and Standard Bank take walk-ins without an appointment, and you do not start on BABS{src('digital')}.</p>
+<div class="card note"><strong>Some applications still have to go to a Home Affairs office.</strong>
+<p>The Digital Partnership page says these are not yet available at the bank branches: a passport during phase 1, a first-time ID (the example given is turning 16), late registration of birth, name changes, amendments to personal details, and complex civic services. Children cannot apply at those branches{src('digital')}. If that is your application, a bank walk-in is not the option the page describes. The first-ID rules: <a href="../first-smart-id-at-16/index.html">First Smart ID at 16</a>. A name change: <a href="../name-or-surname-change/index.html">Name or surname change</a>.</p></div>
+<h2>What BABS says when you have no booking</h2>
+<div class="card"><ul>
+<li>People without a booking are served as walk-ins. A booking is advisable so you are guaranteed the service in your slot, provided the system is up{src('babs')}.</li>
+<li>People without internet may still walk in. They can also be helped to book if they agree to come on a different day{src('babs')}.</li>
+<li>Booked clients are prioritised and are served at dedicated counters{src('babs')}.</li>
+<li>You can cancel or reschedule after you receive confirmation. The notice says slots are displayed so you can select a new date{src('babs')}.</li>
+<li>An appointment is not transferable. You cannot give the slot to a friend or relative{src('babs')}.</li>
+<li>The system sends an SMS or email reminder 3 days before the appointment{src('babs')}.</li>
+<li>The notice says that in the near future, selected offices will process smart ID and passport applications only for clients who have booked. It does not say that rule is already in force, and it does not print the date of the notice{src('babs')}.</li>
+<li>The notice does not say what to do when the list of slots is empty, and it does not name a time of day when slots are added{src('babs')}.</li>
+</ul>
+<p>The older address services.dha.gov.za says the Branch Appointment Booking System has moved, and that it is now on MyHomeAffairsOnline{src('babsmove')}.</p></div>
+<h2>What the online FAQ says about a branch booking</h2>
+<div class="card"><p>The My Home Affairs Online FAQ says you must be logged in to make a branch appointment booking. A person who is not a South African citizen may book, and must provide a passport number. You may cancel an appointment if you are logged in{src('mhaofaq')}. The FAQ does not say when empty days receive new slots. The steps that differ from a bank visit are on <a href="../booking-and-walk-ins/index.html">Booking and walk-ins</a>.</p></div>
+<h2>A bank visit that does not use that booking screen</h2>
+<div class="wrap"><table><tr><th>Where you go</th><th>What the official page says if you have no Home Affairs slot</th></tr>
+<tr><td>Capitec, Digital Partnership</td><td>DHA says Capitec allows walk-ins without an appointment. Capitec's own article describes an in-person visit and does not describe a BABS booking{src('digital','cap')}. Branches: <a href="../banks/capitec/index.html">Capitec</a>.</td></tr>
+<tr><td>Standard Bank, in branch</td><td>Standard Bank says it takes walk-in applications for a green ID to Smart ID and for a re-issue{src('sb')}. Branches: <a href="../banks/standard-bank/index.html">Standard Bank</a>.</td></tr>
+<tr><td>FNB, Smart ID replacement</td><td>FNB says no appointment is needed to replace a lost, stolen or damaged Smart ID at selected branches{src('fnblive')}. The eHomeAffairs route on the same page does use a booking{src('fnblive')}. Branches: <a href="../banks/fnb/index.html">FNB</a>.</td></tr>
+<tr><td>Absa</td><td>The self-service page says book online, use the app, or visit a participating branch{src('absahelp')}. Branches: <a href="../banks/absa/index.html">Absa</a>.</td></tr>
+<tr><td>Nedbank</td><td>Nedbank describes apply online, pay, then book a date. It does not describe a walk-in{src('ned')}. Branches: <a href="../banks/nedbank/index.html">Nedbank</a>.</td></tr>
+<tr><td>Older eHomeAffairs bank office</td><td>DHA's province bank-branch pages say no walk-ins are allowed at banks. You visit after an online application and a booked visit{src('gtb')}.</td></tr>
+</table></div>
+<h2>What these sources do not state</h2>
+<div class="card"><ul>
+<li>A time of day, or a day of the week, when Home Affairs adds appointment slots{src('babs','mhaofaq')}.</li>
+<li>That a walk-in at a Home Affairs office is served as quickly as a booked client. The notice says booked clients are prioritised{src('babs')}.</li>
+<li>That every bank takes a walk-in for every service. The table above is limited to the sentence each page actually prints{src('digital','cap','sb','fnblive','absahelp','ned')}.</li>
+</ul>
+<p>City lists, if you are choosing a branch rather than an office: <a href="../cities/johannesburg/index.html">Johannesburg</a>, <a href="../cities/pretoria/index.html">Pretoria</a>, <a href="../cities/cape-town/index.html">Cape Town</a>, <a href="../cities/durban/index.html">Durban</a>.</p></div>'''
+page('no-home-affairs-appointments/index.html',"No Home Affairs appointments available: your options",na,"What to do when Home Affairs shows no appointment: office walk-ins, banks that do not use that system, and who must still visit an office.",checked=D_NEW,checked_against=[(S['babs'],'the BABS notice'),(S['babsmove'],'the booking site'),(S['digital'],'the Digital Partnership page')])
+hubs=[("/","Home"),("/fees-and-documents/","Fees and documents"),("/booking-and-walk-ins/","Booking and walk-ins"),("/no-home-affairs-appointments/","No appointments"),("/smart-id-status/","Smart ID status"),("/temporary-id-certificate/","Temporary ID"),("/lost-or-stolen-smart-id/","Lost or stolen ID"),("/first-smart-id-at-16/","First ID at 16"),("/collecting-smart-id-or-passport/","Collect your ID"),("/green-id-book-to-smart-id/","Green ID book"),("/applying-for-a-passport/","Passport"),("/name-or-surname-change/","Name or surname change"),("/date-of-birth-or-gender/","Date of birth or gender"),("/banks/capitec/","Capitec"),("/banks/standard-bank/","Standard Bank"),("/banks/fnb/","FNB"),("/banks/absa/","Absa"),("/banks/nedbank/","Nedbank"),("/cities/johannesburg/","Johannesburg"),("/cities/pretoria/","Pretoria"),("/cities/cape-town/","Cape Town"),("/cities/durban/","Durban"),("/provinces/","Provinces"),("/find/","All pages"),("/disclaimer/","Disclaimer")]
 missing='<h1>Page not found</h1><p>That address is not a page on this site. Use the navigation above, or one of these guides.</p><ul>'+''.join(f'<li><a href="{href}">{H.escape(label)}</a></li>' for href,label in hubs)+'</ul>'
 find_body='<h1>All pages</h1><p>Type in the search box at the top of this page. The list below stays complete if search is not available.</p><p id="index-status" class="index-status" aria-live="polite">Showing every page.</p><div id="page-index">'
 for g, items in TOPICS:
@@ -1682,7 +2000,8 @@ def check_internal():
     for path in pages:
         html=open(os.path.join(OUT, path), encoding='utf-8').read()
         ids=set(re.findall(r'\bid="([^"]*)"', html))
-        for href_v in re.findall(r'\bhref="([^"]*)"', html):
+        html_links=re.sub(r'(<script\b[^>]*>).*?(</script>)', r'\1\2', html, flags=re.S|re.I)
+        for href_v in re.findall(r'\bhref="([^"]*)"', html_links):
             if href_v.startswith(('http://','https://','mailto:','tel:')): continue
             url,_,frag=href_v.partition('#')
             if url=='':
@@ -1701,16 +2020,22 @@ def check_internal():
     if missing:
         raise SystemExit('Broken internal links:\n'+'\n'.join(missing[:50]))
     required=('Independent guide. Not a government website.','For general information only.',DISCLAIMER,'/_vercel/insights/script.js','id="read-next"',GOOGLE_SITE_VERIFICATION)
+    sm=open(os.path.join(OUT,'sitemap.xml'),encoding='utf-8').read()
     for path in pages:
         html=open(os.path.join(OUT, path), encoding='utf-8').read()
         for needle in required:
             if needle not in html:
                 raise SystemExit(f'Missing {needle!r} on {path}')
-        if 'rel="canonical"' not in html:
+        canon=re.search(r'rel="canonical" href="([^"]+)"', html)
+        if not canon:
             raise SystemExit('Missing canonical on '+path)
+        h1s=len(re.findall(r'<h1[\s>]', html))
+        if h1s!=1:
+            raise SystemExit(f'{path} has {h1s} h1 tags')
+        if 'noindex' not in html and canon.group(1) not in sm:
+            raise SystemExit('Sitemap missing '+canon.group(1))
         if 'On this page' in html or 'class="toc"' in html or 'has-toc' in html or 'toc-details' in html:
             raise SystemExit('On this page box leaked onto '+path)
-    sm=open(os.path.join(OUT,'sitemap.xml'),encoding='utf-8').read()
     if BASE+'/find/' not in sm:
         raise SystemExit('Sitemap is missing the find page')
     print(len(pages),'html files, internal links ok')
@@ -1737,18 +2062,19 @@ def check_maps():
             if not fn.endswith(".html"): continue
             path=os.path.relpath(os.path.join(dirpath, fn), OUT)
             html=open(os.path.join(OUT, path), encoding="utf-8").read()
-            if "maps/embed" in html or "maps.googleapis" in html: raise SystemExit("Unexpected Google map embed on "+path)
-            if 'id="branch-map"' in html:
-                if html.count('id="branch-map"')!=1: raise SystemExit("Duplicate map on "+path)
-                if 'role="region"' not in html or "aria-label=\"Map of " not in html: raise SystemExit("Map name missing on "+path)
+            html_body=re.sub(r'(<script\b[^>]*>).*?(</script>)', r'\1\2', html, flags=re.S|re.I)
+            if "maps/embed" in html_body or "maps.googleapis" in html_body: raise SystemExit("Unexpected Google map embed on "+path)
+            if 'id="branch-map"' in html_body:
+                if html_body.count('id="branch-map"')!=1: raise SystemExit("Duplicate map on "+path)
+                if 'role="region"' not in html_body or "aria-label=\"Map of " not in html_body: raise SystemExit("Map name missing on "+path)
                 if 'src="/map.js"' not in html: raise SystemExit("Map script missing on "+path)
-                if "Get directions" not in html: raise SystemExit("Directions missing on "+path)
+                if "Get directions" not in html_body: raise SystemExit("Directions missing on "+path)
                 pages.append(path)
                 pin_total+=html.count('"lat":')
-            if path.startswith("banks/") or path.startswith("provinces/") and path!="provinces/index.html":
-                rows=len(re.findall(r"<tr><td>", html))
-                dirs=html.count("https://www.google.com/maps/dir/?api=1&amp;destination=")
-                if rows and rows!=dirs: raise SystemExit(f"Directions {dirs} do not match rows {rows} on {path}")
+            if path.startswith("banks/") or path.startswith("cities/") or (path.startswith("provinces/") and path!="provinces/index.html"):
+                cards=len(re.findall(r'class="branch-card"', html_body))
+                dirs=html_body.count("https://www.google.com/maps/dir/?api=1&amp;destination=")
+                if cards!=dirs: raise SystemExit(f"Directions {dirs} do not match cards {cards} on {path}")
                 if 'target="_blank"' in html and 'rel="noopener"' not in html: raise SystemExit("Directions tab is missing rel=noopener on "+path)
     print(len(pages),"map pages,",pin_total,"pins on those pages")
 publish_map_assets()
