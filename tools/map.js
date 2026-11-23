@@ -1,4 +1,4 @@
-/* Branch map. Leaflet 1.9.4 is self-hosted. Tiles are OpenStreetMap. The table stays the full list. */
+/* Branch map. Leaflet 1.9.4 is self-hosted. Tiles are OpenStreetMap. The cards stay the full list. */
 (function () {
   var root = document.getElementById("branch-map");
   var dataEl = document.getElementById("branch-map-data");
@@ -66,7 +66,7 @@
       bounds.push([pt.lat, pt.lon]);
     });
     if (!bounds.length) {
-      setStatus("No placed branches to show. The table is the full list.");
+      setStatus("No placed branches to show. The cards are the full list.");
       return;
     }
     if (bounds.length === 1) map.setView(bounds[0], 16);
@@ -77,7 +77,7 @@
     use.className = "map-use";
     use.textContent = "Use the map";
     root.insertBefore(use, canvas);
-    setStatus("The map is loaded. Use the zoom buttons, or choose Use the map to zoom with the scroll wheel.");
+    setStatus("The map is loaded. Use the zoom buttons, or choose Use the map to zoom with the scroll wheel. The cards are still the full list.");
     function activate() {
       if (root.classList.contains("is-active")) return;
       root.classList.add("is-active");
@@ -85,7 +85,7 @@
       map.scrollWheelZoom.enable();
       use.setAttribute("aria-pressed", "true");
       use.textContent = "Scroll zoom is on";
-      setStatus("Scroll zoom is on. Arrow keys move the map when it is focused. The table is still the full list.");
+      setStatus("Scroll zoom is on. Arrow keys move the map when it is focused. The cards are still the full list.");
     }
     use.addEventListener("click", activate);
     canvas.addEventListener("click", function (ev) {
@@ -104,7 +104,7 @@
   function start() {
     setStatus("Loading the map.");
     loadLeaflet().then(draw).catch(function () {
-      setStatus("The map could not be loaded. The table is still the full list.");
+      setStatus("The map could not be loaded. The cards are still the full list.");
     });
   }
 

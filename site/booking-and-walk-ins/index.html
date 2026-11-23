@@ -4,8 +4,8 @@
   --s24:24px;
   --s32:32px;
   --s40:40px;
-  --header-compact:108px;
-  --scroll-pad:124px;
+  --header-space:120px;
+  --scroll-pad:136px;
   --ink:#1a1814;
   --paper:#f4f1ea;
   --link:#0a3d66;
@@ -21,7 +21,7 @@
   --muted:#3e3a34;
 }
 *,*::before,*::after{box-sizing:border-box}
-html{scroll-padding-top:0}
+html{scroll-padding-top:var(--scroll-pad)}
 body{margin:0;color:var(--ink);background:var(--paper);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:16px;line-height:1.55;font-weight:400}
 h1,h2,h3,h4,h5,h6,button,input,textarea,select,summary{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
 h1,h2,h3,h4,[id]{scroll-margin-top:var(--scroll-pad)}
@@ -30,21 +30,19 @@ img,svg{max-width:100%}
 .shell{max-width:90rem;margin:0 auto;padding:0 var(--s16);min-width:0}
 .skip{position:absolute;left:var(--s16);top:0;transform:translateY(-120%);background:#fff;color:var(--ink);padding:var(--s12) var(--s16);z-index:80;min-height:48px;font-weight:700;text-decoration:none}
 .skip:focus,.skip:focus-visible{position:fixed;top:var(--s12);left:var(--s12);transform:none;outline:3px solid #fff;box-shadow:0 0 0 6px var(--ink)}
-body.is-docked .skip:focus,body.is-docked .skip:focus-visible{top:calc(var(--header-compact) + var(--s12))}
-#head-slot{min-width:0}
-#site-header{background:var(--head-bg);color:#fff;position:relative;z-index:30}
+#head-slot{min-width:0;height:var(--header-space)}
+#site-header{background:var(--head-bg);color:#fff;position:fixed;top:0;left:0;right:0;z-index:40;box-shadow:0 2px 12px rgba(0,0,0,.28)}
 #site-header a{color:#fff}
-#site-header .shell{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"brand words" "search search" "menu menu" "nav nav";align-items:center;column-gap:var(--s16);row-gap:0;padding-top:var(--s24);padding-bottom:var(--s24);position:relative}
-.brand{grid-area:brand;display:flex;align-items:center;gap:var(--s12);min-width:0;color:#fff;text-decoration:none;font-weight:700}
-.mark{width:32px;height:32px;flex:none;display:block}
+.bar{display:flex;align-items:center;gap:var(--s12);min-height:56px;padding-top:4px;padding-bottom:0;position:relative}
+.brand{display:flex;align-items:center;gap:var(--s12);min-width:0;min-height:48px;color:#fff;text-decoration:none;font-weight:700;flex:1 1 auto}
+.mark{width:28px;height:28px;flex:none;display:block}
 .name{display:flex;flex-direction:column;min-width:0}
-.name-main{font-size:1.125rem;line-height:1.3;font-weight:700}
-.name-compact{display:none}
-.name-sub{font-size:1rem;font-weight:600;color:var(--sub);line-height:1.35;margin-top:var(--s12)}
-.headlink{grid-area:words;display:inline-flex;align-items:center;justify-self:end;min-height:48px;padding:var(--s12) 0;font-weight:700;text-decoration:underline;text-underline-offset:.15em}
-.search-toggle{grid-area:searchbtn;display:none;align-items:center;justify-content:center;gap:var(--s12);min-height:48px;min-width:48px;padding:var(--s12);font-size:1rem;font-weight:700;line-height:1.2;color:#fff;background:transparent;border:2px solid rgba(255,255,255,.85);border-radius:8px;cursor:pointer;position:relative}
-.search-icon{width:1.15rem;height:1.15rem;display:block;flex:none}
-.search-wrap{grid-area:search;position:relative;margin-top:var(--s16)}
+.name-main{display:none}
+.name-compact{display:block;font-size:1rem;line-height:1.2;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.search-toggle{display:inline-flex;align-items:center;justify-content:center;flex:none;width:48px;height:48px;padding:0;color:#fff;background:transparent;border:2px solid rgba(255,255,255,.85);border-radius:8px;cursor:pointer}
+.search-icon{width:1.25rem;height:1.25rem;display:block}
+.search-wrap{display:none;position:absolute;top:100%;left:0;right:0;z-index:36;background:var(--head-bg);padding:var(--s12) 0 var(--s16);box-shadow:0 12px 24px rgba(0,0,0,.28)}
+.search-wrap.is-open{display:block}
 .sitesearch{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s12)}
 .sitesearch label{flex:1 1 100%;color:#fff;font-weight:700}
 .sitesearch input[type="search"]{flex:1 1 12rem;min-width:0;min-height:48px;font-size:1rem;color:var(--ink);background:#fff;border:2px solid #fff;border-radius:8px;padding:var(--s12) var(--s16)}
@@ -57,77 +55,43 @@ body.is-docked .skip:focus,body.is-docked .skip:focus-visible{top:calc(var(--hea
 #site-header .search-results a:visited,#site-header .search-empty a:visited{color:var(--visited)}
 #site-header .search-results a span{color:var(--ink);font-weight:400;text-decoration:none}
 .search-empty{margin:0;padding:var(--s12);color:var(--ink)}
-.menu{grid-area:menu;margin-top:var(--s16)}
-.menu summary{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;padding:var(--s12) var(--s16);background:#fff;color:var(--ink);border-radius:8px;font-weight:700;cursor:pointer;list-style:none}
-.menu summary::-webkit-details-marker,.grp summary::-webkit-details-marker{display:none}
-.menu summary::marker,.grp summary::marker{content:""}
-nav.top{grid-area:nav;display:none;flex-wrap:wrap;align-items:stretch;gap:var(--s12);margin-top:var(--s16);padding-top:var(--s16);border-top:1px solid rgba(255,255,255,.28)}
-details.menu[open]~nav.top{display:flex}
-.grp{position:relative;flex:1 1 auto;min-width:0}
-.grp>summary{display:flex;align-items:center;justify-content:space-between;gap:var(--s12);min-height:48px;padding:var(--s12) var(--s16);color:#fff;font-weight:700;cursor:pointer;list-style:none}
+.nav-shell{position:relative}
+nav.top{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:var(--s12);margin:0;padding:4px 0 8px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;scrollbar-width:thin;min-width:0}
+.grp{position:relative;flex:0 0 auto}
+.grp>summary{display:flex;align-items:center;justify-content:center;gap:var(--s12);min-height:48px;padding:0 var(--s16);color:#fff;font-weight:700;cursor:pointer;list-style:none;white-space:nowrap;border:1px solid rgba(255,255,255,.85);border-radius:999px;background:rgba(0,0,0,.18);scroll-snap-align:start}
+.grp>summary::-webkit-details-marker{display:none}
+.grp>summary::marker{content:""}
 .grp>summary::after{content:"";border:solid #fff;border-width:0 2px 2px 0;width:.45rem;height:.45rem;transform:rotate(45deg);flex:none;margin-top:-.15rem}
 .grp[open]>summary::after{transform:rotate(-135deg);margin-top:.2rem}
-.grp.has-current>summary{box-shadow:inset 0 -3px 0 var(--gold)}
+.grp.has-current>summary{background:rgba(255,255,255,.14);box-shadow:inset 0 -3px 0 var(--gold)}
 .glinks{display:flex;flex-direction:column;min-width:16rem}
-.glinks a{display:flex;align-items:center;min-height:48px;padding:var(--s12) var(--s16);color:#fff;text-decoration:underline;text-underline-offset:.15em}
+.glinks a{display:flex;align-items:center;min-height:48px;padding:var(--s12) var(--s16);color:#fff;text-decoration:underline;text-underline-offset:.15em;border-bottom:1px solid rgba(255,255,255,.22)}
 .glinks a.is-current{font-weight:700;background:rgba(255,255,255,.16);border-radius:6px}
-@media(min-width:720px){
-  .shell{padding:0 var(--s24)}
-  .sitesearch{flex-wrap:nowrap}
-  .sitesearch label{flex:0 0 auto}
-}
-@media(min-width:960px){
-  .menu{display:none}
-  #site-header .shell{grid-template-areas:"brand words" "search search" "nav nav"}
-  nav.top{display:flex;flex-wrap:nowrap;align-items:center;justify-content:flex-start;gap:var(--s12);margin-top:var(--s16);padding-top:var(--s12);padding-bottom:0}
-  .grp{flex:0 0 auto}
-  .grp>summary{min-height:48px;padding:var(--s12) var(--s16);white-space:nowrap;font-size:1rem;gap:var(--s12)}
-  .grp[open] .glinks{position:absolute;z-index:34;top:100%;left:0;background:var(--head-0);border:2px solid #fff;border-radius:8px;padding:var(--s12);box-shadow:0 8px 24px rgba(0,0,0,.28)}
-}
-@media(max-width:959px){
-  nav.top{flex-direction:column;gap:var(--s12)}
-  .grp{width:100%}
-  .glinks a{border-bottom:1px solid rgba(255,255,255,.22)}
-}
+.grp[open] .glinks{position:fixed;z-index:46;top:var(--header-space);left:0;right:0;max-width:none;background:var(--head-0);border:2px solid #fff;border-top:0;border-radius:0 0 10px 10px;padding:var(--s12);box-shadow:0 8px 24px rgba(0,0,0,.35);max-height:min(60vh,22rem);overflow:auto}
 .nav-fade,.nav-hint{display:none}
 .nav-hint::before{content:"";display:block;width:.5rem;height:.5rem;border:solid var(--gold);border-width:0 3px 3px 0;transform:rotate(-45deg)}
-body.is-docked #site-header{position:fixed;top:0;left:0;right:0;height:var(--header-compact);z-index:40;box-shadow:0 2px 12px rgba(0,0,0,.28);overflow:visible}
-body.is-docked #site-header .shell{height:100%;padding:0 var(--s16);column-gap:var(--s12);row-gap:var(--s12);grid-template-columns:minmax(0,1fr) auto;grid-template-rows:48px 48px;grid-template-areas:"brand searchbtn" "nav nav";align-items:center}
-body.is-docked .brand{min-height:48px;min-width:0;gap:var(--s12)}
-body.is-docked .name-sub,body.is-docked .headlink,body.is-docked .name-compact,body.is-docked .menu{display:none}
-body.is-docked .name-main{display:block;font-size:1rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-body.is-docked .headcta{margin:0}
-body.is-docked .search-toggle{display:inline-flex}
-body.is-docked .search-wrap{display:none;margin:0;position:absolute;top:100%;left:0;right:0;z-index:36;background:var(--head-bg);padding:var(--s16) 0 var(--s16);box-shadow:0 12px 24px rgba(0,0,0,.28)}
-body.is-docked .search-wrap.is-open{display:block}
-body.is-docked nav.top{display:flex;grid-area:nav;position:relative;top:auto;left:auto;right:auto;margin:0;padding:0;border:0;background:transparent;box-shadow:none;flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:flex-start;gap:var(--s12);min-width:0;max-height:none;overflow:visible}
-body.is-docked .grp{flex:0 0 auto;width:auto}
-body.is-docked .grp>summary{min-height:48px;padding:0 var(--s12);white-space:nowrap;font-size:1rem;gap:var(--s12);border-radius:8px}
-body.is-docked .grp.has-current>summary{background:rgba(255,255,255,.14);box-shadow:inset 0 -3px 0 var(--gold)}
-body.is-docked .grp[open] .glinks{position:absolute;z-index:46;top:calc(100% + 12px);left:0;right:auto;min-width:16rem;max-width:min(22rem,92vw);background:var(--head-0);border:2px solid #fff;border-radius:8px;padding:var(--s12);box-shadow:0 8px 24px rgba(0,0,0,.35);max-height:min(60vh,22rem);overflow:auto}
-body.is-docked .grp:nth-last-child(-n+2)[open] .glinks{left:auto;right:0}
-body.is-docked.nav-more-right .nav-fade-right,body.is-docked.nav-more-left .nav-fade-left{display:block;position:absolute;bottom:0;height:48px;width:40px;pointer-events:none;z-index:4}
-body.is-docked.nav-more-right .nav-fade-right{right:0;background:linear-gradient(90deg,rgba(12,47,74,0),#0C2F4A 72%)}
-body.is-docked.nav-more-left .nav-fade-left{left:0;background:linear-gradient(90deg,#06382A 28%,rgba(6,56,42,0))}
-body.is-docked.nav-more-right .nav-hint{display:flex;align-items:center;justify-content:flex-end;position:absolute;right:var(--s12);bottom:0;width:24px;height:48px;pointer-events:none;z-index:5}
-@media(max-width:959px){
-  body.is-docked nav.top{overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;scrollbar-width:thin;padding-bottom:0}
-  body.is-docked .grp>summary{scroll-snap-align:start;border:1px solid rgba(255,255,255,.85);border-radius:999px;background:rgba(0,0,0,.18)}
-  body.is-docked .grp[open] .glinks,body.is-docked .grp:nth-last-child(-n+2)[open] .glinks{position:fixed;top:var(--header-compact);left:0;right:0;max-width:none;border-radius:0 0 10px 10px}
+body.nav-more-right .nav-fade-right,body.nav-more-left .nav-fade-left{display:block;position:absolute;top:4px;height:48px;width:40px;pointer-events:none;z-index:4}
+body.nav-more-right .nav-fade-right{right:0;background:linear-gradient(90deg,rgba(12,47,74,0),#0C2F4A 72%)}
+body.nav-more-left .nav-fade-left{left:0;background:linear-gradient(90deg,#06382A 28%,rgba(6,56,42,0))}
+body.nav-more-right .nav-hint{display:flex;align-items:center;justify-content:flex-end;position:absolute;right:var(--s12);top:4px;width:24px;height:48px;pointer-events:none;z-index:5}
+@media(min-width:720px){
+  .shell{padding:0 var(--s24)}
 }
-@media(max-width:720px){
-  body.is-docked #site-header .shell{column-gap:var(--s12);padding-left:var(--s16);padding-right:var(--s16)}
-  body.is-docked .name-main{display:none}
-  body.is-docked .name-compact{display:block;font-size:1rem;line-height:1.2;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  body.is-docked .mark{width:28px;height:28px}
-  body.is-docked .search-toggle{padding:0;width:48px}
-  body.is-docked .search-toggle-text{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(min-width:960px){
+  .bar{gap:var(--s16)}
+  .name-compact{display:none}
+  .name-main{display:block;font-size:1.125rem;line-height:1.2;white-space:nowrap}
+  .mark{width:32px;height:32px}
+  .search-toggle{display:none}
+  .search-wrap{display:block;position:relative;top:auto;left:auto;right:auto;flex:1 1 22rem;max-width:36rem;margin:0;padding:0;background:transparent;box-shadow:none;z-index:auto}
+  .sitesearch{flex-wrap:nowrap}
+  .sitesearch label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  .grp[open] .glinks{position:absolute;top:calc(100% + 8px);left:0;right:auto;min-width:16rem;max-width:22rem;border-radius:8px;border:2px solid #fff}
+  .grp:nth-last-child(-n+2)[open] .glinks{left:auto;right:0}
 }
-.notice{background:#fff6db;color:var(--ink);border-bottom:3px solid #8a5a00}
-.notice .shell{padding-top:var(--s16);padding-bottom:var(--s16)}
-.notice p{margin:0;font-size:16px;line-height:1.5;max-width:66ch}
+
 main{min-width:0}
-main>.shell{padding-top:var(--s24);padding-bottom:var(--s40)}
+main>.shell{padding-top:var(--s16);padding-bottom:var(--s40)}
 main:focus{outline:none}
 main:focus-visible{outline:3px solid var(--ink);outline-offset:4px}
 .crumbs ol{display:flex;flex-wrap:wrap;list-style:none;padding:0;margin:0 0 var(--s12);gap:0}
@@ -138,9 +102,10 @@ main:focus-visible{outline:3px solid var(--ink);outline-offset:4px}
 .checked{display:inline-flex;align-items:center;min-height:44px;background:#e5f2ea;color:#143024;border:1px solid #1d4f3e;border-radius:8px;padding:var(--s12) var(--s16);font-size:16px;margin:0}
 article.content{min-width:0}
 .head-block{margin:0}
-.head-block p,.content p,.card p,.inshort p,footer p,.notice p{max-width:66ch}
+.head-block p,.content p,.card p,.inshort p,footer p,.site-note,.checked-line,.summary p,.lede{max-width:66ch}
 h1,h2,h3{line-height:1.25;font-weight:700}
-h1{font-size:1.6rem;margin:0 0 var(--s16)}
+h1{font-size:1.75rem;margin:0 0 var(--s12)}
+@media(min-width:720px){h1{font-size:2.125rem}}
 h2{font-size:1.25rem;margin:var(--s32) 0 var(--s12)}
 h3{font-size:1.05rem;margin:var(--s24) 0 var(--s12)}
 .inshort{background:#eef4f1;border-left:6px solid #1d4f3e;border-radius:10px;padding:var(--s16);margin:0 0 var(--s24)}
@@ -157,11 +122,14 @@ h2+.card,h3+.card{margin-top:var(--s12)}
 .card li+li{margin-top:var(--s12)}
 .note{background:#fff8ec;border-color:#8a5a00;border-left:6px solid #8a5a00}
 details.card summary{min-height:48px;display:flex;align-items:center;cursor:pointer;font-weight:700}
-.tasks,.link-grid,.readnext ul,.index-list{list-style:none;padding:0;margin:var(--s16) 0 0;display:grid;gap:var(--s16);grid-template-columns:1fr}
-@media(min-width:720px){.tasks,.link-grid,.readnext ul,.index-list{grid-template-columns:1fr 1fr}}
+.tasks,.link-grid,.readnext ul,.index-list,.choice-grid{list-style:none;padding:0;margin:var(--s16) 0 0;display:grid;gap:var(--s16);grid-template-columns:1fr;align-items:stretch}
+.tasks>li,.readnext li,.choice-grid>li{display:flex;flex-direction:column;align-items:stretch}
+@media(min-width:720px){.tasks,.link-grid,.readnext ul,.index-list{grid-template-columns:1fr 1fr}.choice-grid{grid-template-columns:1fr 1fr}}
+@media(min-width:1100px){.tasks{grid-template-columns:1fr 1fr 1fr}}
 .topic{margin:0 0 var(--s32)}
 .topic>h3{margin-top:0}
-.jump{display:flex;flex-direction:column;justify-content:center;gap:var(--s12);min-height:48px;padding:var(--s16);background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:12px;text-decoration:none}
+.jump{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:var(--s12);min-height:48px;flex:1;width:100%;padding:var(--s16);background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:12px;text-decoration:none}
+.ico{width:28px;height:28px;flex:none;color:#06382A}
 .jump:hover{border-color:var(--link)}
 .jump .lt{color:var(--link);font-weight:700;text-decoration:underline;text-underline-offset:.12em;font-size:1.125rem}
 .jump .ls{color:var(--ink);font-size:1rem;text-decoration:none;font-weight:400}
@@ -194,6 +162,40 @@ th{background:#e7efe9;color:var(--ink);font-weight:700}
 .branch-filter label{display:block;font-weight:700;margin:0 0 var(--s12)}
 .branch-filter input{width:100%;min-height:48px;font-size:1rem;color:var(--ink);background:#fff;border:2px solid var(--ink);border-radius:8px;padding:var(--s12) var(--s16)}
 .branch-filter input::placeholder{color:var(--muted);opacity:1}
+
+.site-note{margin:0 0 var(--s12);font-size:1rem;line-height:1.45}
+.checked-line{margin:0 0 var(--s16);color:var(--muted)}
+.summary{background:#fff;border:1px solid var(--line);border-radius:12px;padding:var(--s16);margin:0 0 var(--s16)}
+.summary p{margin:0}
+.lede{font-size:1.125rem}
+.finder-cols{display:grid;gap:var(--s24);margin-top:var(--s16)}
+@media(min-width:960px){.finder-cols{grid-template-columns:1.05fr 1.35fr .9fr;align-items:start}}
+.finder-cols h3{margin-top:0}
+.choice{display:flex;flex-direction:column;justify-content:center;gap:4px;min-height:48px;flex:1;width:100%;padding:var(--s12) var(--s16);background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:12px;text-decoration:none}
+.choice:hover{border-color:var(--link)}
+.choice .ct{color:var(--link);font-weight:700;text-decoration:underline;text-underline-offset:.12em}
+.choice .cn{color:var(--ink);font-weight:400;text-decoration:none}
+a.choice:visited .ct{color:var(--visited)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;margin:0 0 var(--s12);padding:var(--s12) var(--s16);font-size:1rem;font-weight:700;color:var(--ink);background:#fff;border:2px solid var(--ink);border-radius:8px;cursor:pointer}
+.btn:hover{background:#e7efe9}
+.branch-tools{display:grid;gap:var(--s16);margin:var(--s16) 0}
+@media(min-width:720px){.branch-tools{grid-template-columns:minmax(12rem,18rem) minmax(0,1fr);align-items:end}}
+.branch-tools label{display:block;font-weight:700;margin:0 0 var(--s12)}
+.branch-tools select,.branch-tools input{width:100%;min-height:48px;font-size:1rem;color:var(--ink);background:#fff;border:2px solid var(--ink);border-radius:8px;padding:var(--s12) var(--s16)}
+.branch-count{font-weight:700;margin:0 0 var(--s12)}
+.branch-cards{list-style:none;padding:0;margin:var(--s16) 0 0;display:grid;gap:var(--s16);grid-template-columns:1fr}
+@media(min-width:720px){.branch-cards{grid-template-columns:1fr 1fr}}
+@media(min-width:1100px){.branch-cards{grid-template-columns:1fr 1fr 1fr}}
+.branch-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:var(--s16);display:flex;flex-direction:column;gap:var(--s12);min-width:0}
+.branch-card .bc-kicker{margin:0;font-weight:700;color:#143024}
+.branch-card .bc-name{margin:0;font-size:1.125rem;font-weight:700;line-height:1.3}
+.branch-card .bc-where,.branch-card .bc-svc{margin:0}
+.branch-card .bc-go{margin:auto 0 0}
+.branch-card .bc-go a{display:inline-flex;align-items:center;min-height:48px;font-weight:700}
+.city-row{display:flex;flex-wrap:wrap;gap:var(--s12);list-style:none;padding:0;margin:var(--s16) 0 0}
+.city-row a{display:inline-flex;align-items:center;min-height:48px;padding:0 var(--s16);background:#fff;border:1px solid var(--line);border-radius:999px;font-weight:700;text-decoration:none}
+.city-row a span{text-decoration:underline;text-underline-offset:.12em}
+
 footer{border-top:1px solid var(--line);color:var(--ink);margin-top:var(--s32)}
 footer .shell{padding-top:var(--s32);padding-bottom:var(--s40)}
 footer p{margin:0 0 var(--s16)}
@@ -228,22 +230,24 @@ footer p{margin:0 0 var(--s16)}
   .map-canvas{height:420px}
 }
 @media(forced-colors:active){
-  .card,.inshort,.notice,.jump,.pn a,.menu summary,.search-toggle,.sitesearch button,.loc-map,.map-use{border:1px solid CanvasText}
+  .card,.inshort,.jump,.pn a,.search-toggle,.sitesearch button,.loc-map,.map-use,.choice,.branch-card,.btn,.summary{border:1px solid CanvasText}
   .sitesearch button,.map-use{background:ButtonFace;color:ButtonText}
 }
 </style><script defer src="/_vercel/insights/script.js"></script></head><body>
 <a class="skip" href="#content">Skip to content</a>
-<div id="head-slot"><header id="site-header"><div class="shell">
-<a class="brand" href="/"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect x="1" y="5" width="30" height="22" rx="3" fill="none" stroke="#fff" stroke-width="2"/><circle cx="11" cy="16" r="3.2" fill="#FFB81C"/><rect x="17" y="12" width="9" height="2" rx="1" fill="#fff"/><rect x="17" y="17" width="7" height="2" rx="1" fill="#E7F2EC"/></svg><span class="name"><span class="name-main">Smart ID at the Bank</span><span class="name-compact">Smart ID guide</span><span class="name-sub">Independent guide. Not a government website.</span></span></a>
-<button type="button" class="search-toggle" aria-expanded="false" aria-controls="site-search"><svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="search-toggle-text">Search</span></button>
-<a class="headlink" href="/find/">All pages</a>
-<div class="search-wrap" id="site-search"><form class="sitesearch" role="search" action="/find/" method="get"><label for="q">Search this guide</label><input id="q" name="q" type="search" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="submit">Search</button></form><div id="search-results" class="search-results" hidden tabindex="0" role="region" aria-live="polite" aria-label="Matching pages"></div></div>
-<details class="menu"><summary>Topics</summary></details>
-<nav id="site-nav" class="top" aria-label="Topics" tabindex="0"><details class="grp has-current"><summary aria-current="true">Before you go</summary><div class="glinks"><a href="/fees-and-documents/">Fees and documents</a><a href="/booking-and-walk-ins/" class="is-current" aria-current="page">Booking and walk-ins</a></div></details><details class="grp"><summary>Which document</summary><div class="glinks"><a href="/green-id-book-to-smart-id/">Green ID book to Smart ID</a><a href="/lost-or-stolen-smart-id/">Lost or stolen Smart ID</a><a href="/name-or-surname-change/">Name or surname change</a><a href="/date-of-birth-or-gender/">Date of birth or gender</a><a href="/first-smart-id-at-16/">First Smart ID at 16</a><a href="/applying-for-a-passport/">Applying for a passport</a><a href="/collecting-smart-id-or-passport/">Collecting a Smart ID or passport</a></div></details><details class="grp"><summary>Banks</summary><div class="glinks"><a href="/banks/capitec/">Capitec</a><a href="/banks/standard-bank/">Standard Bank</a><a href="/banks/fnb/">FNB (First National Bank)</a><a href="/banks/absa/">Absa</a><a href="/banks/nedbank/">Nedbank</a></div></details><details class="grp"><summary>Provinces</summary><div class="glinks"><a href="/provinces/">All provinces</a><a href="/provinces/eastern-cape/">Eastern Cape</a><a href="/provinces/free-state/">Free State</a><a href="/provinces/gauteng/">Gauteng</a><a href="/provinces/kwazulu-natal/">KwaZulu-Natal</a><a href="/provinces/limpopo/">Limpopo</a><a href="/provinces/mpumalanga/">Mpumalanga</a><a href="/provinces/north-west/">North West</a><a href="/provinces/northern-cape/">Northern Cape</a><a href="/provinces/western-cape/">Western Cape</a></div></details><details class="grp"><summary>Using this guide</summary><div class="glinks"><a href="/find/">All pages</a><a href="/disclaimer/">Disclaimer</a></div></details></nav>
+<div id="head-slot"><header id="site-header">
+<div class="shell bar">
+<a class="brand" href="/"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect x="1" y="5" width="30" height="22" rx="3" fill="none" stroke="#fff" stroke-width="2"/><circle cx="11" cy="16" r="3.2" fill="#FFB81C"/><rect x="17" y="12" width="9" height="2" rx="1" fill="#fff"/><rect x="17" y="17" width="7" height="2" rx="1" fill="#E7F2EC"/></svg><span class="name"><span class="name-main">Smart ID at the Bank</span><span class="name-compact">Smart ID guide</span></span></a>
+<div class="search-wrap" id="site-search"><form class="sitesearch" role="search" action="/find/" method="get"><label for="q">Search this guide</label><input id="q" name="q" type="search" placeholder="Search this guide" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="submit">Search</button></form><div id="search-results" class="search-results" hidden tabindex="0" role="region" aria-live="polite" aria-label="Matching pages"></div></div>
+<button type="button" class="search-toggle" aria-expanded="false" aria-controls="site-search"><svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="vh">Search</span></button>
+</div>
+<div class="shell nav-shell">
+<nav id="site-nav" class="top" aria-label="Topics" tabindex="0"><details class="grp has-current"><summary aria-current="true">Before you go</summary><div class="glinks"><a href="/fees-and-documents/">Fees and documents</a><a href="/booking-and-walk-ins/" class="is-current" aria-current="page">Booking and walk-ins</a><a href="/no-home-affairs-appointments/">No appointments</a><a href="/smart-id-status/">Smart ID status</a></div></details><details class="grp"><summary>Which document</summary><div class="glinks"><a href="/green-id-book-to-smart-id/">Green ID book deadline</a><a href="/lost-or-stolen-smart-id/">Lost or stolen Smart ID</a><a href="/name-or-surname-change/">Name or surname change</a><a href="/date-of-birth-or-gender/">Date of birth or gender</a><a href="/first-smart-id-at-16/">First Smart ID at 16</a><a href="/applying-for-a-passport/">Applying for a passport</a><a href="/collecting-smart-id-or-passport/">Collection booking</a><a href="/temporary-id-certificate/">Temporary ID certificate</a></div></details><details class="grp"><summary>Banks</summary><div class="glinks"><a href="/banks/capitec/">Capitec</a><a href="/banks/standard-bank/">Standard Bank</a><a href="/banks/fnb/">FNB (First National Bank)</a><a href="/banks/absa/">Absa</a><a href="/banks/nedbank/">Nedbank</a></div></details><details class="grp"><summary>Cities</summary><div class="glinks"><a href="/cities/johannesburg/">Johannesburg</a><a href="/cities/pretoria/">Pretoria</a><a href="/cities/cape-town/">Cape Town</a><a href="/cities/durban/">Durban</a></div></details><details class="grp"><summary>Provinces</summary><div class="glinks"><a href="/provinces/">All provinces</a><a href="/provinces/eastern-cape/">Eastern Cape</a><a href="/provinces/free-state/">Free State</a><a href="/provinces/gauteng/">Gauteng</a><a href="/provinces/kwazulu-natal/">KwaZulu-Natal</a><a href="/provinces/limpopo/">Limpopo</a><a href="/provinces/mpumalanga/">Mpumalanga</a><a href="/provinces/north-west/">North West</a><a href="/provinces/northern-cape/">Northern Cape</a><a href="/provinces/western-cape/">Western Cape</a></div></details><details class="grp"><summary>Using this guide</summary><div class="glinks"><a href="/find/">All pages</a><a href="/disclaimer/">Disclaimer</a></div></details></nav>
 <span class="nav-fade nav-fade-left" aria-hidden="true"></span><span class="nav-fade nav-fade-right" aria-hidden="true"></span><span class="nav-hint" aria-hidden="true"></span>
-</div></header></div>
-<main id="content" tabindex="-1"><div class="notice" role="note"><div class="shell"><p class="disclaimer">For general information only. This independent site is not affiliated with any government, bank or agency. <a href="/disclaimer/">Disclaimer</a>.</p></div></div><div class="shell"><nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/#before-you-go">Before you go</a></li><li><span aria-current="page">Booking and walk-ins</span></li></ol></nav><p class="meta"><span class="checked">Last checked: 26 October 2026</span></p><article class="content" aria-labelledby="page-title"><div class="head-block"><h1 id="page-title">Booking a Smart ID: BABS, bank branches and walk-ins</h1><div class="inshort"><p><strong>In short.</strong> How to book a South African Smart ID: the Branch Appointment Booking System for Home Affairs offices, eHomeAffairs for older bank branches, and walk-in rules at Digital Partnership banks.</p></div>
-<p>A common question is whether a Smart ID at a bank is booked on DHA's Branch Appointment Booking System (BABS), and whether a walk-in is accepted. Official pages describe three different ways to apply. This page says which way books a Home Affairs office, which way books a bank, and what each official page says about walk-ins. Fees, documents and age rules are on <a href="/fees-and-documents/">Fees and documents</a>. Branch lists are on the <a href="/banks/capitec/">bank</a> and <a href="/provinces/">province</a> pages.</p>
+</div>
+</header></div>
+<main id="content" tabindex="-1"><div class="shell"><p class="site-note">Independent guide. Not a government website. <a href="/disclaimer/">Disclaimer</a>.</p><nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/#before-you-go">Before you go</a></li><li><span aria-current="page">Booking and walk-ins</span></li></ol></nav><article class="content" aria-labelledby="page-title"><div class="head-block"><h1 id="page-title">Booking a Smart ID: BABS, bank branches and walk-ins</h1><p class="checked-line">Checked against <a href="https://www.dha.gov.za/index.php/id-smart-card/banks-digital">the Department of Home Affairs</a> on 26 October 2026. Sources are linked next to each fact.</p><div class="inshort"><p><strong>In short.</strong> How to book a South African Smart ID: the Branch Appointment Booking System for Home Affairs offices, eHomeAffairs for older bank branches, and walk-in rules at Digital Partnership banks.</p></div>
+<p>A common question is whether a Smart ID at a bank is booked on DHA's Branch Appointment Booking System (BABS), and whether a walk-in is accepted. Official pages describe three different ways to apply. This page says which way books a Home Affairs office, which way books a bank, and what each official page says about walk-ins. If the booking screen shows no slot, the options that official pages do state are on <a href="/no-home-affairs-appointments/">No Home Affairs appointments</a>. Fees, documents and age rules are on <a href="/fees-and-documents/">Fees and documents</a>. Branch lists are on the <a href="/banks/capitec/">bank</a> and <a href="/provinces/">province</a> pages.</p>
 <div class="card note"><strong>BABS does not book a bank branch.</strong>
 <p>DHA's BABS notice answers the difference in its own words: eHomeAffairs "allows the client to make a booking, upload documents and make payment then be processed at the Banks", while BABS "provides a client with an opportunity to book a time slot to get in the office." Both let you book a time slot for an application <span class="src">[<a href="https://www.dha.gov.za/index.php/notices/1557-branch-appointment-booking-system-babs-available-offices" rel="noopener">source</a>]</span>.</p>
 <p>The older address <a href="https://services.dha.gov.za/" rel="noopener">services.dha.gov.za</a> says the Branch Appointment Booking System has moved, and that it is now on MyHomeAffairsOnline. The button on that page goes to <a href="https://myhomeaffairsonline.dha.gov.za/" rel="noopener">myhomeaffairsonline.dha.gov.za</a> <span class="src">[<a href="https://services.dha.gov.za/" rel="noopener">source</a>]</span>.</p></div>
@@ -367,9 +371,9 @@ footer p{margin:0 0 var(--s16)}
 <tr><td>Nedbank, eHomeAffairs</td><td>Select a date, then visit. A walk-in without that booking: not stated by source <span class="src">[<a href="https://personal.nedbank.co.za/learn/blog/apply-for-a-smart-id-online.html" rel="noopener">source</a>]</span>.</td></tr>
 <tr><td>Older DHA bank-branch lists</td><td>No walk-ins. Online application and a booked visit first <span class="src">[<a href="https://www.dha.gov.za/index.php/contact-us/bank-branches/98-gauteng-banks" rel="noopener">source</a>]</span>.</td></tr>
 </table></div>
-<p>Branch lists and client rules: <a href="/banks/capitec/">Capitec</a>, <a href="/banks/standard-bank/">Standard Bank</a>, <a href="/banks/fnb/">FNB</a>, <a href="/banks/absa/">Absa</a>, <a href="/banks/nedbank/">Nedbank</a>, and <a href="/provinces/">provinces</a>. What to pay and what to carry: <a href="/fees-and-documents/">Fees and documents</a>. After the application: <a href="/collecting-smart-id-or-passport/">Collecting a Smart ID or passport</a>.</p><nav class="pn" aria-label="Pages in this series"><a class="prev" href="/fees-and-documents/"><span class="pn-k">Previous</span><span class="pn-t">Fees and documents</span></a><a class="next" href="/green-id-book-to-smart-id/"><span class="pn-k">Next</span><span class="pn-t">Green ID book to Smart ID</span></a></nav><aside class="readnext" aria-labelledby="read-next"><h2 id="read-next">Read next</h2><ul><li><a class="jump" href="/name-or-surname-change/"><span class="lt">Name or surname change</span><span class="ls">A forename or surname change is done at Home Affairs, not at a bank. Official pages do not all use the same route, the same documents or the same fee, and a new Smart ID is a separate application.</span></a></li><li><a class="jump" href="/fees-and-documents/"><span class="lt">Fees and documents</span><span class="ls">Department of Home Affairs fees for a Smart ID and a passport, documents to bring at a bank or a Home Affairs office, and age rules, each linked to an official source.</span></a></li><li><a class="jump" href="/provinces/"><span class="lt">All provinces</span><span class="ls">Smart ID bank branches in every South African province, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm before you travel.</span></a></li></ul></aside></div></div></article></div></main>
+<p>Branch lists and client rules: <a href="/banks/capitec/">Capitec</a>, <a href="/banks/standard-bank/">Standard Bank</a>, <a href="/banks/fnb/">FNB</a>, <a href="/banks/absa/">Absa</a>, <a href="/banks/nedbank/">Nedbank</a>, and <a href="/provinces/">provinces</a>. What to pay and what to carry: <a href="/fees-and-documents/">Fees and documents</a>. After the application: <a href="/collecting-smart-id-or-passport/">Collecting a Smart ID or passport</a>.</p><nav class="pn" aria-label="Pages in this series"><a class="prev" href="/fees-and-documents/"><span class="pn-k">Previous</span><span class="pn-t">Fees and documents</span></a><a class="next" href="/no-home-affairs-appointments/"><span class="pn-k">Next</span><span class="pn-t">No appointments</span></a></nav><aside class="readnext" aria-labelledby="read-next"><h2 id="read-next">Next step</h2><ul><li><a class="jump" href="/no-home-affairs-appointments/"><span class="lt">No appointments</span><span class="ls">If Home Affairs shows no appointment, the BABS notice still serves walk-ins, and some bank branches do not use that booking system. A first ID still goes to an office.</span></a></li><li><a class="jump" href="/fees-and-documents/"><span class="lt">Fees and documents</span><span class="ls">Department of Home Affairs fees for a Smart ID and a passport, documents to bring at a bank or a Home Affairs office, and age rules, each linked to an official source.</span></a></li><li><a class="jump" href="/provinces/"><span class="lt">All provinces</span><span class="ls">Smart ID bank branches in every South African province, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm before you travel.</span></a></li></ul></aside></div></div></article></div></main>
 <footer><div class="shell"><nav class="footnav" aria-label="About this guide"><a href="/find/">All pages</a><a href="/disclaimer/">Disclaimer</a></nav><p>For general information only. This independent site is not affiliated with any government, bank or agency. Information can change and may contain errors; always confirm with the official source before you act. Nothing here is legal, financial or professional advice, and we accept no liability for decisions made using it.</p><p><a href="/disclaimer/">Disclaimer</a></p><p>Related guides: <a href="https://sa-passport-id-usa-guide-w1ab.vercel.app/">Passport and ID guide for South Africans in the USA</a>.</p><p>Independent, unofficial guide. Not affiliated with the Department of Home Affairs (DHA) or any bank. Facts are taken only from official DHA, gov.za and bank pages, linked next to each fact. Rules change often: always confirm on the official source before you travel. DHA contact centre: 0800 60 11 90  <span class="src">[<a href="https://www.fnb.co.za/ways-to-bank/branch.html" rel="noopener">source</a>]</span>. Last checked: 26 October 2026.</p></div></footer>
-<script type="application/json" id="search-data">[{"u": "/", "t": "Home", "s": "Start here, top tasks, and every topic on this guide.", "g": "Home", "k": "home smart id passport bank guide south africa"}, {"u": "/fees-and-documents/", "t": "Fees and documents", "s": "Department of Home Affairs fees for a Smart ID and a passport, documents to bring at a bank or a Home Affairs office, and age rules, each linked to an official source.", "g": "Before you go", "k": "fees cost tariff documents age DHA R140 passport"}, {"u": "/booking-and-walk-ins/", "t": "Booking and walk-ins", "s": "How to book a South African Smart ID: the Branch Appointment Booking System for Home Affairs offices, eHomeAffairs for older bank branches, and walk-in rules at Digital Partnership banks.", "g": "Before you go", "k": "booking appointment walk-in walk in BABS eHomeAffairs"}, {"u": "/green-id-book-to-smart-id/", "t": "Green ID book to Smart ID", "s": "Switching a South African green ID book to a Smart ID: whether it is still valid, the dates announced for 2027 and 2028, the fee, and which banks take it.", "g": "Which document", "k": "green barcoded ID book convert switch"}, {"u": "/lost-or-stolen-smart-id/", "t": "Lost or stolen Smart ID", "s": "What the Department of Home Affairs and each bank say about replacing a lost, stolen or damaged Smart ID, including a police report or an affidavit only where an official source states it.", "g": "Which document", "k": "lost stolen damaged replace affidavit police"}, {"u": "/name-or-surname-change/", "t": "Name or surname change", "s": "A forename or surname change is done at Home Affairs, not at a bank. Official pages do not all use the same route, the same documents or the same fee, and a new Smart ID is a separate application.", "g": "Which document", "k": "name surname forename change marriage divorce gazette"}, {"u": "/date-of-birth-or-gender/", "t": "Date of birth or gender", "s": "A wrong date of birth or a wrong recorded sex is corrected at Home Affairs, before a new Smart ID. Official pages do not all use the same form, the same documents or the same fee.", "g": "Which document", "k": "date of birth gender sex description rectify DHA-526"}, {"u": "/first-smart-id-at-16/", "t": "First Smart ID at 16", "s": "First South African Smart ID at 16: Department of Home Affairs document lists, who must attend, the free first issue, and which banks do not take a first-time applicant.", "g": "Which document", "k": "first ID 16 sixteen youth child minor"}, {"u": "/applying-for-a-passport/", "t": "Applying for a passport", "s": "Where to apply for a South African passport, which banks name it, the Department of Home Affairs document list, consent for a child, and the fee each official page states.", "g": "Which document", "k": "passport child consent tourist maxi"}, {"u": "/collecting-smart-id-or-passport/", "t": "Collecting a Smart ID or passport", "s": "When a South African Smart ID or passport is ready: how the Department of Home Affairs and each bank notify you, where you collect, what to bring, who may collect, and any deadline a source states.", "g": "Which document", "k": "collect collection ready delivery"}, {"u": "/banks/capitec/", "t": "Capitec", "s": "Capitec Smart ID and passport branch service: walk-in or booking, client requirement, fees and branch list. Sourced from the Department of Home Affairs.", "g": "Banks", "k": "Capitec walk-in"}, {"u": "/banks/standard-bank/", "t": "Standard Bank", "s": "Standard Bank Smart ID and passport branch service: walk-in or booking, client requirement, fees and branch list. Sourced from the Department of Home Affairs.", "g": "Banks", "k": "Standard Bank"}, {"u": "/banks/fnb/", "t": "FNB (First National Bank)", "s": "First National Bank Smart ID and passport branch service: walk-in or booking, client requirement, fees and branch list. Sourced from the Department of Home Affairs.", "g": "Banks", "k": "FNB First National Bank"}, {"u": "/banks/absa/", "t": "Absa", "s": "Absa Smart ID and passport branch service: walk-in or booking, client requirement, fees and branch list. Sourced from the Department of Home Affairs.", "g": "Banks", "k": "Absa"}, {"u": "/banks/nedbank/", "t": "Nedbank", "s": "Nedbank Smart ID and passport branch service: walk-in or booking, client requirement, fees and branch list. Sourced from the Department of Home Affairs.", "g": "Banks", "k": "Nedbank"}, {"u": "/provinces/", "t": "All provinces", "s": "Smart ID bank branches in every South African province, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm before you travel.", "g": "Provinces", "k": "province provinces branches"}, {"u": "/provinces/eastern-cape/", "t": "Eastern Cape", "s": "Bank branches in Eastern Cape for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go.", "g": "Provinces", "k": "Eastern Cape province branches"}, {"u": "/provinces/free-state/", "t": "Free State", "s": "Bank branches in Free State for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go.", "g": "Provinces", "k": "Free State province branches"}, {"u": "/provinces/gauteng/", "t": "Gauteng", "s": "Bank branches in Gauteng for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go.", "g": "Provinces", "k": "Gauteng province branches"}, {"u": "/provinces/kwazulu-natal/", "t": "KwaZulu-Natal", "s": "Bank branches in KwaZulu-Natal for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go.", "g": "Provinces", "k": "KwaZulu-Natal province branches"}, {"u": "/provinces/limpopo/", "t": "Limpopo", "s": "Bank branches in Limpopo for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go.", "g": "Provinces", "k": "Limpopo province branches"}, {"u": "/provinces/mpumalanga/", "t": "Mpumalanga", "s": "Bank branches in Mpumalanga for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go.", "g": "Provinces", "k": "Mpumalanga province branches"}, {"u": "/provinces/north-west/", "t": "North West", "s": "Bank branches in North West for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go.", "g": "Provinces", "k": "North West province branches"}, {"u": "/provinces/northern-cape/", "t": "Northern Cape", "s": "Bank branches in Northern Cape for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go.", "g": "Provinces", "k": "Northern Cape province branches"}, {"u": "/provinces/western-cape/", "t": "Western Cape", "s": "Bank branches in Western Cape for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go.", "g": "Provinces", "k": "Western Cape province branches"}, {"u": "/find/", "t": "All pages", "s": "Every page on this guide, listed by topic.", "g": "Using this guide", "k": "search index all pages find"}, {"u": "/disclaimer/", "t": "Disclaimer", "s": "This independent site is not affiliated with any government, bank or agency. General information only, with no warranty and no liability for how you use it.", "g": "Using this guide", "k": "disclaimer liability warranty independent"}]</script><script>(function(){
+<script type="application/json" id="search-data">[{"u": "/", "t": "Home", "s": "Start here, top tasks, and every topic on this guide.", "g": "Home", "k": "home smart id passport bank guide south africa"}, {"u": "/fees-and-documents/", "t": "Fees and documents", "s": "Department of Home Affairs fees for a Smart ID and a passport, documents to bring at a bank or a Home Affairs office, and age rules, each linked to an official source.", "g": "Before you go", "k": "fees cost tariff documents age DHA R140 passport"}, {"u": "/booking-and-walk-ins/", "t": "Booking and walk-ins", "s": "How to book a South African Smart ID: the Branch Appointment Booking System for Home Affairs offices, eHomeAffairs for older bank branches, and walk-in rules at Digital Partnership banks.", "g": "Before you go", "k": "booking appointment walk-in walk in BABS eHomeAffairs"}, {"u": "/no-home-affairs-appointments/", "t": "No appointments", "s": "If Home Affairs shows no appointment, the BABS notice still serves walk-ins, and some bank branches do not use that booking system. A first ID still goes to an office.", "g": "Before you go", "k": "no appointments available home affairs booking slots"}, {"u": "/smart-id-status/", "t": "Smart ID status", "s": "How the Department of Home Affairs and each bank say you hear that a Smart ID is ready, and which official page states a time. No guessed waiting period.", "g": "Before you go", "k": "status check track trace how long sms"}, {"u": "/green-id-book-to-smart-id/", "t": "Green ID book deadline", "s": "The green ID book deadline in the October 2026 announcements is 31 March 2027 for production and 31 March 2028 for recognition. Those dates are not on every official page.", "g": "Which document", "k": "green barcoded ID book convert switch"}, {"u": "/lost-or-stolen-smart-id/", "t": "Lost or stolen Smart ID", "s": "What the Department of Home Affairs and each bank say about replacing a lost, stolen or damaged Smart ID, including a police report or an affidavit only where an official source states it.", "g": "Which document", "k": "lost stolen damaged replace affidavit police"}, {"u": "/name-or-surname-change/", "t": "Name or surname change", "s": "A forename or surname change is done at Home Affairs, not at a bank. Official pages do not all use the same route, the same documents or the same fee, and a new Smart ID is a separate application.", "g": "Which document", "k": "name surname forename change marriage divorce gazette"}, {"u": "/date-of-birth-or-gender/", "t": "Date of birth or gender", "s": "A wrong date of birth or a wrong recorded sex is corrected at Home Affairs, before a new Smart ID. Official pages do not all use the same form, the same documents or the same fee.", "g": "Which document", "k": "date of birth gender sex description rectify DHA-526"}, {"u": "/first-smart-id-at-16/", "t": "First Smart ID at 16", "s": "First South African Smart ID at 16: Department of Home Affairs document lists, who must attend, the free first issue, and which banks do not take a first-time applicant.", "g": "Which document", "k": "first ID 16 sixteen youth child minor"}, {"u": "/applying-for-a-passport/", "t": "Applying for a passport", "s": "Where to apply for a South African passport, which banks name it, the Department of Home Affairs document list, consent for a child, and the fee each official page states.", "g": "Which document", "k": "passport child consent tourist maxi"}, {"u": "/collecting-smart-id-or-passport/", "t": "Collection booking", "s": "When a South African Smart ID or passport is ready: how the Department of Home Affairs and each bank notify you, where you collect, what to bring, who may collect, and any deadline a source states.", "g": "Which document", "k": "collect collection ready delivery booking"}, {"u": "/temporary-id-certificate/", "t": "Temporary ID certificate", "s": "A temporary identity certificate on the DHA identity documents page: R70, valid for two months, after a fingerprint check. Bank pages that do not mention one are left out.", "g": "Which document", "k": "temporary id certificate TIC R70 two months"}, {"u": "/banks/capitec/", "t": "Capitec", "s": "Capitec Smart ID branches, booking and walk-ins: the client rule, the fee, and the branch list from the Department of Home Affairs locator.", "g": "Banks", "k": "Capitec walk-in"}, {"u": "/banks/standard-bank/", "t": "Standard Bank", "s": "Standard Bank Smart ID branches, booking and walk-ins: the client rule, the fee, and the branch list from the Department of Home Affairs locator.", "g": "Banks", "k": "Standard Bank"}, {"u": "/banks/fnb/", "t": "FNB (First National Bank)", "s": "First National Bank Smart ID branches, booking and walk-ins: the client rule, the fee, and the branch list from the Department of Home Affairs locator.", "g": "Banks", "k": "FNB First National Bank"}, {"u": "/banks/absa/", "t": "Absa", "s": "Absa Smart ID branches, booking and walk-ins: the client rule, the fee, and the branch list from the Department of Home Affairs locator.", "g": "Banks", "k": "Absa"}, {"u": "/banks/nedbank/", "t": "Nedbank", "s": "Nedbank Smart ID branches, booking and walk-ins: the client rule, the fee, and the branch list from the Department of Home Affairs locator.", "g": "Banks", "k": "Nedbank"}, {"u": "/cities/johannesburg/", "t": "Johannesburg", "s": "Smart ID bank branches whose DHA city field is Johannesburg, as cards you can filter by bank. Soweto and Sandton are different city values.", "g": "Cities", "k": "johannesburg joburg smart id branches"}, {"u": "/cities/pretoria/", "t": "Pretoria", "s": "Smart ID bank branches whose DHA city field is Pretoria, as cards you can filter by bank. Centurion is a different city value.", "g": "Cities", "k": "pretoria smart id branches"}, {"u": "/cities/cape-town/", "t": "Cape Town", "s": "Smart ID bank branches whose DHA city field is Cape Town, as cards you can filter by bank. Other Western Cape towns stay on the province page.", "g": "Cities", "k": "cape town smart id branches"}, {"u": "/cities/durban/", "t": "Durban", "s": "Smart ID bank branches whose DHA city field is Durban, as cards you can filter by bank. Other KwaZulu-Natal towns stay on the province page.", "g": "Cities", "k": "durban smart id branches"}, {"u": "/provinces/", "t": "All provinces", "s": "Smart ID bank branches in every South African province, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm before you travel.", "g": "Provinces", "k": "province provinces branches"}, {"u": "/provinces/eastern-cape/", "t": "Eastern Cape", "s": "Bank branches in Eastern Cape for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go.", "g": "Provinces", "k": "Eastern Cape province branches"}, {"u": "/provinces/free-state/", "t": "Free State", "s": "Bank branches in Free State for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go.", "g": "Provinces", "k": "Free State province branches"}, {"u": "/provinces/gauteng/", "t": "Gauteng", "s": "Bank branches in Gauteng for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go.", "g": "Provinces", "k": "Gauteng province branches"}, {"u": "/provinces/kwazulu-natal/", "t": "KwaZulu-Natal", "s": "Bank branches in KwaZulu-Natal for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go.", "g": "Provinces", "k": "KwaZulu-Natal province branches"}, {"u": "/provinces/limpopo/", "t": "Limpopo", "s": "Bank branches in Limpopo for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go.", "g": "Provinces", "k": "Limpopo province branches"}, {"u": "/provinces/mpumalanga/", "t": "Mpumalanga", "s": "Bank branches in Mpumalanga for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go.", "g": "Provinces", "k": "Mpumalanga province branches"}, {"u": "/provinces/north-west/", "t": "North West", "s": "Bank branches in North West for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go.", "g": "Provinces", "k": "North West province branches"}, {"u": "/provinces/northern-cape/", "t": "Northern Cape", "s": "Bank branches in Northern Cape for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go.", "g": "Provinces", "k": "Northern Cape province branches"}, {"u": "/provinces/western-cape/", "t": "Western Cape", "s": "Bank branches in Western Cape for a Smart ID, from the Department of Home Affairs Digital Partnership locator and the older eHomeAffairs lists. Confirm the branch before you go.", "g": "Provinces", "k": "Western Cape province branches"}, {"u": "/find/", "t": "All pages", "s": "Every page on this guide, listed by topic.", "g": "Using this guide", "k": "search index all pages find"}, {"u": "/disclaimer/", "t": "Disclaimer", "s": "This independent site is not affiliated with any government, bank or agency. General information only, with no warranty and no liability for how you use it.", "g": "Using this guide", "k": "disclaimer liability warranty independent"}]</script><script>(function(){
   var el=document.getElementById("search-data");
   var input=document.getElementById("q");
   var box=document.getElementById("search-results");
@@ -473,42 +477,35 @@ footer p{margin:0 0 var(--s16)}
   var slot=document.getElementById("head-slot");
   var toggle=document.querySelector(".search-toggle");
   var search=document.getElementById("site-search");
-  var menu=document.querySelector("details.menu");
-  if(!header||!slot) return;
-  var docked=false;
-  var fullH=0;
-  function compactPx(){
-    var raw=getComputedStyle(document.documentElement).getPropertyValue("--header-compact")||"108px";
-    var n=parseFloat(raw);
-    if(String(raw).indexOf("rem")>=0){
-      n=n*parseFloat(getComputedStyle(document.documentElement).fontSize||"16");
-    }
-    return n||108;
-  }
-  function setSearchOpen(open){
-    if(!search||!toggle) return;
-    if(open && !document.body.classList.contains("is-docked")) open=false;
-    search.classList.toggle("is-open", open);
-    toggle.setAttribute("aria-expanded", open?"true":"false");
-    if(open){ if(menu) menu.removeAttribute("open"); closeGroups(); }
-    if(open){
-      var input=document.getElementById("q");
-      if(input) input.focus();
-    }
-  }
-  function measure(){
-    if(docked) return;
-    if(menu && menu.hasAttribute("open")) return;
-    fullH=header.offsetHeight;
-  }
   var nav=document.getElementById("site-nav");
+  if(!header||!slot) return;
   function closeGroups(){
     var open=document.querySelectorAll(".grp[open]");
     for(var i=0;i<open.length;i++) open[i].removeAttribute("open");
   }
+  function wide(){
+    return window.matchMedia("(min-width:960px)").matches;
+  }
+  function setSpace(){
+    var h=header.offsetHeight;
+    document.documentElement.style.setProperty("--header-space", h+"px");
+    document.documentElement.style.setProperty("--scroll-pad", (h+16)+"px");
+    slot.style.height=h+"px";
+  }
+  function setSearchOpen(open){
+    if(!search||!toggle) return;
+    if(wide()) open=false;
+    search.classList.toggle("is-open", !!open);
+    toggle.setAttribute("aria-expanded", open?"true":"false");
+    if(open){
+      closeGroups();
+      var input=document.getElementById("q");
+      if(input) input.focus();
+    }
+  }
   function updateHint(){
     if(!nav) return;
-    var more=docked && nav.scrollWidth>nav.clientWidth+8;
+    var more=nav.scrollWidth>nav.clientWidth+8;
     var atEnd=nav.scrollLeft+nav.clientWidth>=nav.scrollWidth-8;
     var atStart=nav.scrollLeft<=8;
     document.body.classList.toggle("nav-more-right", !!(more && !atEnd));
@@ -522,34 +519,8 @@ footer p{margin:0 0 var(--s16)}
     nav.scrollLeft=left<0?0:left;
     updateHint();
   }
-  function dock(){
-    if(docked) return;
-    if(menu) menu.removeAttribute("open");
-    closeGroups();
-    setSearchOpen(false);
-    measure();
-    if(!fullH) fullH=header.offsetHeight;
-    slot.style.height=fullH+"px";
-    document.body.classList.add("is-docked");
-    docked=true;
-    revealCurrent();
-  }
-  function undock(){
-    if(!docked) return;
-    setSearchOpen(false);
-    closeGroups();
-    if(menu) menu.removeAttribute("open");
-    document.body.classList.remove("is-docked");
-    document.body.classList.remove("nav-more-right");
-    document.body.classList.remove("nav-more-left");
-    slot.style.height="";
-    docked=false;
-    measure();
-  }
   function coverEdge(){
-    if(docked) return compactPx()+16;
-    var bottom=header.getBoundingClientRect().bottom;
-    return (bottom>0?bottom:compactPx())+16;
+    return header.getBoundingClientRect().height+16;
   }
   function revealTarget(el){
     if(!el||!el.getBoundingClientRect) return;
@@ -566,34 +537,16 @@ footer p{margin:0 0 var(--s16)}
     var el=document.getElementById(id);
     if(el) revealTarget(el);
   }
-  function onScroll(){
-    var y=window.scrollY||document.documentElement.scrollTop||0;
-    var line=fullH-compactPx();
-    if(!fullH) measure();
-    var was=docked;
-    if(!docked){
-      measure();
-      if(fullH>compactPx() && y>fullH-compactPx()) dock();
-    } else if(y<line-24){
-      undock();
-    }
-    if(was!==docked) revealHash();
-  }
   if(toggle){
     toggle.addEventListener("click", function(){
       var open=toggle.getAttribute("aria-expanded")==="true";
       setSearchOpen(!open);
     });
   }
-  if(menu){
-    var sum=menu.querySelector("summary");
-    if(sum) sum.addEventListener("click", function(){ setSearchOpen(false); });
-  }
   document.addEventListener("keydown", function(e){
     if(e.key!=="Escape") return;
     setSearchOpen(false);
     closeGroups();
-    if(menu && menu.hasAttribute("open")) menu.removeAttribute("open");
     var box=document.getElementById("search-results");
     if(box){ box.hidden=true; box.innerHTML=""; }
   });
@@ -604,10 +557,9 @@ footer p{margin:0 0 var(--s16)}
       var href=link.getAttribute("href")||"";
       if(href.indexOf("#")>=0) setTimeout(revealHash, 0);
     }
-    if(!docked||header.contains(t)) return;
+    if(header.contains(t)) return;
     setSearchOpen(false);
     closeGroups();
-    if(menu) menu.removeAttribute("open");
   });
   if(nav){
     nav.addEventListener("scroll", updateHint, {passive:true});
@@ -618,7 +570,7 @@ footer p{margin:0 0 var(--s16)}
   }
   document.addEventListener("focusin", function(e){
     var t=e.target;
-    if(!t||!docked) return;
+    if(!t) return;
     if(nav && nav.contains(t) && nav.scrollWidth>nav.clientWidth+8 && t.closest){
       var grp=t.closest(".grp");
       if(grp){
@@ -633,15 +585,98 @@ footer p{margin:0 0 var(--s16)}
     if(header.contains(t)||(t.classList&&t.classList.contains("skip"))) return;
     revealTarget(t);
   });
-  window.addEventListener("scroll", onScroll, {passive:true});
   window.addEventListener("hashchange", function(){ setTimeout(revealHash, 0); });
   window.addEventListener("resize", function(){
-    if(docked) undock();
-    measure();
-    onScroll();
+    setSearchOpen(false);
+    setSpace();
+    updateHint();
   });
-  measure();
-  onScroll();
+  setSpace();
+  revealCurrent();
   revealHash();
+})();
+(function(){
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];
+    });
+  }
+  var cards=document.querySelectorAll(".branch-card");
+  var bank=document.getElementById("bank-filter");
+  var text=document.getElementById("branch-filter");
+  var count=document.getElementById("branch-count");
+  function applyFilter(){
+    if(!cards.length || (!bank && !text)) return;
+    var b=bank?bank.value:"";
+    var q=(text&&text.value?text.value:"").trim().toLowerCase();
+    var shown=0;
+    for(var i=0;i<cards.length;i++){
+      var el=cards[i];
+      var blob=(el.getAttribute("data-text")||el.textContent||"").toLowerCase();
+      var ok=true;
+      if(b && el.getAttribute("data-bank")!==b) ok=false;
+      if(ok && q && blob.indexOf(q)<0) ok=false;
+      el.hidden=!ok;
+      if(ok) shown++;
+    }
+    var groups=document.querySelectorAll(".branch-group");
+    for(var g=0;g<groups.length;g++){
+      var vis=groups[g].querySelectorAll(".branch-card:not([hidden])");
+      groups[g].hidden=vis.length===0;
+    }
+    if(count){
+      if(!b && !q) count.textContent="Showing all "+cards.length+" branches.";
+      else count.textContent="Showing "+shown+" of "+cards.length+" branches.";
+    }
+  }
+  if(bank) bank.addEventListener("change", applyFilter);
+  if(text) text.addEventListener("input", applyFilter);
+  applyFilter();
+  var locBtn=document.getElementById("use-location");
+  var locStatus=document.getElementById("location-status");
+  var locList=document.getElementById("nearest-list");
+  var locData=document.getElementById("nearest-data");
+  if(!locBtn||!locStatus||!locList||!locData) return;
+  var places=[];
+  try { places=JSON.parse(locData.textContent)||[]; } catch(e){ places=[]; }
+  function dist(lat1,lon1,lat2,lon2){
+    var R=6371, p=Math.PI/180;
+    var dLat=(lat2-lat1)*p, dLon=(lon2-lon1)*p;
+    var x=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*p)*Math.cos(lat2*p)*Math.sin(dLon/2)*Math.sin(dLon/2);
+    return 2*R*Math.asin(Math.min(1,Math.sqrt(x)));
+  }
+  locBtn.addEventListener("click", function(){
+    locStatus.textContent="Asking this browser for a location. The coordinates stay on this page.";
+    if(!navigator.geolocation){
+      locStatus.textContent="This browser cannot share a location. Pick a bank, a province, or a city.";
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(function(pos){
+      var lat=pos.coords.latitude, lon=pos.coords.longitude;
+      var ranked=[];
+      for(var i=0;i<places.length;i++){
+        var place=places[i];
+        if(typeof place.lat!=="number"||typeof place.lon!=="number") continue;
+        ranked.push({p:place, km:dist(lat, lon, place.lat, place.lon)});
+      }
+      ranked.sort(function(a,b){ return a.km-b.km; });
+      ranked=ranked.slice(0,5);
+      if(!ranked.length){
+        locStatus.textContent="No placed branches to compare. Pick a city or a province.";
+        locList.innerHTML="";
+        return;
+      }
+      locStatus.textContent="Five nearest branches this guide could place on a map. Distance is a straight line. A city page lists every branch, including ones without a pin.";
+      var html="";
+      for(var n=0;n<ranked.length;n++){
+        var item=ranked[n].p;
+        var km=ranked[n].km<10?ranked[n].km.toFixed(1):String(Math.round(ranked[n].km));
+        html+='<li class="branch-card"><p class="bc-kicker">'+esc(item.bank)+'</p><p class="bc-name">'+esc(item.name)+'</p><p class="bc-where">'+esc(item.city)+', about '+esc(km)+' km</p><p class="bc-go"><a href="'+esc(item.directions)+'" target="_blank" rel="noopener">Get directions<span class="vh"> (opens in a new tab)</span></a></p></li>';
+      }
+      locList.innerHTML=html;
+    }, function(){
+      locStatus.textContent="Location was not shared. Pick a bank, a province, or a city.";
+    }, {enableHighAccuracy:false, timeout:12000, maximumAge:300000});
+  });
 })();
 </script></body></html>
